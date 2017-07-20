@@ -135,13 +135,19 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
         return;
     }
 
-    int downlinkBatId = buf[0];
-    if (buf[1]>0) {
-      battery[downlinkBatId]->setManualTimeout(buf[1]);
-      battery[downlinkBatId]->level[0]->setPumpState(buf[2] & (1<<0));
-      battery[downlinkBatId]->level[1]->setPumpState(buf[2] & (1<<1));
-      battery[downlinkBatId]->level[2]->setPumpState(buf[2] & (1<<2));
-      battery[downlinkBatId]->flow[1]->setPumpState(buf[2] & (1<<3));
+    int downlinkBatId = buf[0] >> 4;
+    if (downlinkBatId >= lengthof(battery)) {
+        Serial.println("Invalid battery index");
+        return;
+    }
+
+    uint16_t timeout = (buf[1] << 8) | buf[2];
+    battery[downlinkBatId]->setManualTimeout(timeout);
+    if (timeout > 0) {
+      battery[downlinkBatId]->level[0]->setPumpState(buf[0] & (1<<0));
+      battery[downlinkBatId]->level[1]->setPumpState(buf[0] & (1<<1));
+      battery[downlinkBatId]->level[2]->setPumpState(buf[0] & (1<<2));
+      battery[downlinkBatId]->flow[1]->setPumpState(buf[0] & (1<<3));
     }
 
     battery[downlinkBatId]->flow[1]->setTargetFlow(buf[3]);
@@ -153,6 +159,7 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     battery[downlinkBatId]->level[0]->setMinLevel(buf[7]);
     battery[downlinkBatId]->level[1]->setMinLevel(buf[8]);
     battery[downlinkBatId]->level[2]->setMinLevel(buf[9]);
+
     battery[downlinkBatId]->level[0]->setMaxLevel(buf[10]);
     battery[downlinkBatId]->level[1]->setMaxLevel(buf[11]);
     battery[downlinkBatId]->level[2]->setMaxLevel(buf[12]);
