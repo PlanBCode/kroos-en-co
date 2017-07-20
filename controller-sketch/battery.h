@@ -1,27 +1,32 @@
 #include <PID_v1.h>
 
+#define lengthof(x) (sizeof(x)/sizeof(*x))
+
 const unsigned long TX_INTERVAL = 5 * 60000UL;
 
 class FlowController {
 public:
   int pumpPin;
-  double pumpState;
-  int pumpOffTime;
+  uint8_t pumpState;
 
   int sensorPin;
-  double a=0.16, b=-3;
   int lastSensorState;
   int flowCounter;
+  const double pulsesPerM2 = 1.0;
   double currentFlow;
   double targetFlow;
+  double targetCount;
 
   FlowController(int sensorPin, int pumpPin = -1) {
+    this->sensorPin = sensorPin;
+    this->pumpPin = pumpPin;
     pinMode(sensorPin, INPUT);
     if (pumpPin!=-1) {
       pinMode(pumpPin, OUTPUT);
       digitalWrite(pumpPin, LOW);
     }
     flowCounter = 0;
+    targetFlow = 0;
   }
 
   double getCurrentFlow() {
@@ -31,11 +36,17 @@ public:
   void setTargetFlow(double value) {
     targetFlow = value;
   }
+
   double getTargetFlow() {
     return targetFlow;
   }
 
+  /* Return the pump duty cycle over the previous cycle (when called
+   * directly after doCycle()). */
   double getPumpState() {
+    // Pump still on? Full duty cycle then
+    if (digitalRead(pumpPin) == HIGH)
+      return 255;
     return pumpState;
   }
 
@@ -43,34 +54,52 @@ public:
     digitalWrite(pumpPin, state);
   }
 
-  bool doCycle(unsigned long now, bool manual) {
-    currentFlow = a*flowCounter + b;
+  bool doCycle(unsigned long /* now */, bool manual) {
+    currentFlow = flowCounter / pulsesPerM2 * (3600000/TX_INTERVAL);
     flowCounter = 0;
 
     if (!manual) {
-      if (pumpPin!=-1) {
-        int pumpOnDuration = targetFlow*TX_INTERVAL/3600000;
-        if (pumpOnDuration) {
+      if (pumpPin != -1) {
+        int todo = (unsigned int)targetCount - flowCounter;
+        // If we haven't reached the target by the end of the cycle,
+        // reset to prevent building up backlog
+        if (todo > 0)
+          targetCount = flowCounter;
+
+        // targetCount is a double, so it preserves fractional pulses
+        // across cycles
+        targetCount += targetFlow*(TX_INTERVAL/3600000);
+        todo = (unsigned int)targetCount - flowCounter;
+
+        // If we're leaking more than the intended flow, reset to
+        // prevent building up backlog
+        if (todo < 0)
+          targetCount = flowCounter;
+
+        if (todo) {
           digitalWrite(pumpPin, HIGH);
-          pumpOffTime = now + pumpOnDuration;
-          pumpState = pumpOnDuration/TX_INTERVAL;
+        } else {
+          digitalWrite(pumpPin, LOW);
         }
       }
     }
     return false;
   }
 
-  void doLoop(unsigned long now, bool manual) {
+  void doLoop(unsigned long lastCycle, unsigned long now, bool manual) {
     int sensorState = digitalRead(sensorPin);
-    if (sensorState!=lastSensorState) {
-      if(sensorState==HIGH) flowCounter++;
+    if (sensorState != lastSensorState) {
+      if (sensorState == HIGH) flowCounter++;
       lastSensorState = sensorState;
     }
 
     if (!manual) {
-      if (pumpPin!=-1) {
-        if (digitalRead(pumpPin) && now > pumpOffTime) {
+      if (pumpPin != -1) {
+        int todo = (unsigned int)targetCount - flowCounter;
+        if (digitalRead(pumpPin) == HIGH && todo <= 0) {
           digitalWrite(pumpPin, LOW);
+          // Calculate how long the pump has been on
+          pumpState = (now - lastCycle) * 255 / TX_INTERVAL;
         }
       }
     }
@@ -80,27 +109,42 @@ public:
 class LevelController {
 public:
   int sensorPin;
-  double a=0.16, b=-3;
+  // 5000mV, 1023 steps, 100Ohm, 0.15mA/cm
+  double a=5000.0/1023/100/0.15;
+  double b=-3;
   double currentLevel;
   double targetLevel;
   double minLevel;
   double maxLevel;
 
   int pumpPin;
-  int pumpState;
-  int pumpOffTime;
+  uint8_t pumpState;
+  unsigned long pumpOnDuration;
 
   PID* pid;
   double pidOutput;
-  double Kp=0.1, Ki=0.1, Kd=0;
+  double Kp=10, Ki=0.001, Kd=0;
 
   LevelController(int sensorPin, int pumpPin) {
     this->sensorPin = sensorPin;
     this->pumpPin = pumpPin;
 
     pinMode(pumpPin, OUTPUT);
+    digitalWrite(pumpPin, LOW);
 
     pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, DIRECT);
+    // The library expects ms, so divides this by 1000 so the Ki/Kd
+    // values are per second. However, 5 minutes in ms overflows an int,
+    // so scale by 60 here. The Ki/Kd values become per minute from
+    // this.
+    pid->SetSampleTime(TX_INTERVAL / 60);
+    pid->SetMode(AUTOMATIC);
+    pid->SetOutputLimits(0, 1);
+
+    targetLevel = 0;
+    currentLevel = 0;
+    minLevel = 0;
+    maxLevel = 1.6; // Max sensor reading
   }
 
   double getCurrentLevel() {
@@ -128,7 +172,9 @@ public:
     return maxLevel;
   }
 
-  double getPumpState() {
+  /* Return the pump duty cycle over the previous cycle (when called
+   * directly after doCycle()). */
+  uint8_t getPumpState() {
     return pumpState;
   }
 
@@ -136,26 +182,29 @@ public:
     digitalWrite(pumpPin, state);
   }
 
-  bool doCycle(unsigned long now, bool manual) {
+  bool doCycle(unsigned long /* now */, bool manual) {
     currentLevel = a*analogRead(sensorPin) + b;
     if (currentLevel < minLevel || currentLevel > maxLevel) {
       return true;
     }
     else if (!manual) {
+      // Store pumpstate over *previous* cycle
+      pumpState = pidOutput * 255;
+      // Calculate pump time for next cycle
       pid->Compute();
-      unsigned long pumpOnDuration = TX_INTERVAL*pidOutput/255;
+      pumpOnDuration = TX_INTERVAL*pidOutput;
       if (pumpOnDuration) {
         digitalWrite(pumpPin, HIGH);
-        pumpOffTime = now + pumpOnDuration;
-        pumpState = pumpOnDuration/TX_INTERVAL;
+      } else {
+        digitalWrite(pumpPin, LOW);
       }
     }
     return false;
   }
 
-  void doLoop(unsigned long now, bool manual) {
+  void doLoop(unsigned long lastCycle, unsigned long now, bool manual) {
     if (!manual) {
-      if (digitalRead(pumpPin) && now > pumpOffTime) {
+      if (now - lastCycle > pumpOnDuration) {
         digitalWrite(pumpPin, LOW);
       }
     }
@@ -166,43 +215,49 @@ class Battery {
 public:
   FlowController* flow[2];
   LevelController* level[3];
-  unsigned int manualEndTime;
-  bool manual;
+  unsigned long manualTimeout;
   bool panic;
 
   Battery() {
+    manualTimeout = 0;
     panic = false;
   }
 
-  void attachFlowController(int i, int sensorPin, int pumpPin = -1) {
+  void attachFlowController(size_t i, int sensorPin, int pumpPin = -1) {
     flow[i] = new FlowController(sensorPin, pumpPin);
   }
 
-  void attachLevelController(int i, int sensorPin, int pumpPin) {
+  void attachLevelController(size_t i, int sensorPin, int pumpPin) {
     level[i] = new LevelController(sensorPin, pumpPin);
   }
 
   void setManualTimeout(unsigned int timeout) {
+    // When called after doCycle(), this might cut the timeout a little
+    // bit short (max TX_INTERVAL)
     if (timeout>0) {
-      manualEndTime = millis() + timeout*60000;
-      manual = true;
+      manualTimeout = timeout*60000;
     }
   }
 
   unsigned int getManualTimeout() {
-    return (millis() - manualEndTime)/60000;
+    return manualTimeout / 60000;
   }
 
-  bool doCycle(unsigned long now) {
-    for (int i=0;i<2;i++) panic|= flow[i]->doCycle(now, manual);
-    for (int i=0;i<3;i++) panic|= level[i]->doCycle(now, manual);
+  bool doCycle(unsigned long lastCycle, unsigned long now) {
+    manualTimeout -= min(manualTimeout, now - lastCycle);
+    bool manual = (manualTimeout > 0);
+    for (size_t i=0;i<lengthof(flow);i++) panic |= flow[i]->doCycle(now, manual);
+    for (size_t i=0;i<lengthof(level);i++) panic |= level[i]->doCycle(now, manual);
+    // TODO: Act on panic?
     return panic;
   }
 
-  void doLoop(unsigned long now) {
-    if (now >= manualEndTime) manual = false;
-    for (int i=0;i<2;i++) flow[i]->doLoop(now, manual);
-    for (int i=0;i<3;i++) level[i]->doLoop(now, manual);
+  void doLoop(unsigned long lastCycle, unsigned long now) {
+    bool manual = manualTimeout > 0 && manualTimeout < (now - lastCycle);
+    lastCycle = now;
+
+    for (size_t i=0;i<lengthof(flow);i++) flow[i]->doLoop(lastCycle, now, manual);
+    for (size_t i=0;i<lengthof(level);i++) level[i]->doLoop(lastCycle, now, manual);
   }
 };
 
