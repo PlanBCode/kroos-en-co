@@ -5,6 +5,7 @@ from flask import Flask, request, session, g, redirect, url_for, abort, \
      render_template, flash
 from flask_socketio import SocketIO, send, emit
 from threading import Thread
+from jinja2.parser import *
 
 from . import mqtt, database
 
@@ -41,13 +42,15 @@ if not app.debug and app.config.get('ERRORS_TO', []):
 
 @app.route('/')
 def index():
-    return render_template('index.html');
+    context = {
+        'login': True,
+        'id': 'lankheet-1',
+    }
+    try:
+        return render_template('index.html', **context)
+    except TemplateSyntaxError as e:
+        print(e.lineno)
 
-@app.socketio.on('message')
-def handle_message(message):
-    print('received message: ' + str(message))
-    send(message)
-    app.socketio.emit('status', 'foo')
 
 def send_message(message):
     send(message)

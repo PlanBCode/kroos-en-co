@@ -83,22 +83,22 @@ def device_to_battery(app, device, battery_num):
 	""" Look up a battery id for the given device id and index."""
 	return app.config['DEVICES'][device][battery_num]
 
-def send_command(app, row):
-    values = dict(row)
-    device, values['battery_num'] = battery_to_device(app, row['battery'])
+def send_command(app, config):
+    device, battery_num = battery_to_device(app, config['battery'])
+
     msg = {
 	"port": 1,
 	"confirmed": False,
-	"payload_fields": dict(values),
-	#"payload_raw": "",
+	"payload_raw": base64.b64encode(encode_command(config, battery_num)).decode('ascii'),
 	"schedule": "replace",
     }
     topic = "{}/devices/{}/down".format(app.config['TTN_APP_ID'], device)
     payload = json.dumps(msg)
     app.mqtt.publish(topic, payload)
+    app.logger.debug("Publishing to topic %s: %s", topic, payload)
 
-def encode_command(cmd, battery_num):
-    raw = bytes()
+def encode_command(msg, battery_num):
+    raw = bytearray(13)
     raw[0] = battery_num << 4;
     if msg['manualTimeout'] > 0:
         if msg['pump'][0]:
@@ -111,16 +111,17 @@ def encode_command(cmd, battery_num):
             raw[0] |= (1 << 4)
     raw[1] = msg['manualTimeout'] >> 8;
     raw[2] = msg['manualTimeout'] & 0xff;
-    raw[3] = msg['targetFlow'],
-    raw[4] = msg['targetLevel'][0],
-    raw[5] = msg['targetLevel'][1],
-    raw[6] = msg['targetLevel'][2],
-    raw[7] = msg['minLevel'][0],
-    raw[8] = msg['minLevel'][1],
-    raw[9] = msg['minLevel'][2],
-    raw[10] = msg['maxLevel'][0],
-    raw[11] = msg['maxLevel'][1],
-    raw[12] = msg['maxLevel'][2],
+    raw[3] = msg['targetFlow'];
+    raw[4] = msg['targetLevel'][0];
+    raw[5] = msg['targetLevel'][1];
+    raw[6] = msg['targetLevel'][2];
+    raw[7] = msg['minLevel'][0];
+    raw[8] = msg['minLevel'][1];
+    raw[9] = msg['minLevel'][2];
+    raw[10] = msg['maxLevel'][0];
+    raw[11] = msg['maxLevel'][1];
+    raw[12] = msg['maxLevel'][2];
+    return raw
 
 def decode_status(raw):
     status = {}

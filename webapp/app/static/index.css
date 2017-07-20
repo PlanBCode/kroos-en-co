@@ -1,0 +1,36 @@
+.automatic {
+    display: table-cell;
+}
+.manual {
+    display: table-cell;
+}
+table {
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid black;
+    text-align:center;
+    width: 130px;
+}
+#pumpLegend0 {
+    position: absolute;
+    left: 60px;
+}
+#pumpLegend1 {
+    position: absolute;
+    left: 272px;
+}
+#pumpLegend2 {
+    position: absolute;
+    left: 484px;
+}
+#pumpLegend3 {
+    position: absolute;
+    left: 696px;
+}
+input[type=number] {
+    border: none;
+    font-size: 12pt;
+    text-align: center;
+}
+pre {background-color:rgba(0,0,0,0.2); padding:10px;}

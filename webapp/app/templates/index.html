@@ -1,27 +1,325 @@
 {% extends "base.html" %}
 {% block head %}
-    <style type="text/css">
-      pre {background-color:rgba(0,0,0,0.2); padding:10px;}
-    </style>
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='index.css') }}">
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
     <script type="text/javascript" src="//code.jquery.com/jquery.js"></script>
-{% endblock %}
-{% block body %}
     <script>
-    $(function() {
-	var socket = io();
-	$('form').submit(function() {
-	    socket.emit('message', JSON.parse($('#m').val()));
-	    return false;
-	});
-	socket.on('status', function(msg) {
-	    $('#output').append(JSON.stringify(msg) + '\n');
-	});
-	socket.on('message', function(msg) {
-	    $('#output').append(JSON.stringify(msg) + '\n');
-	});
-    });
-    </script>
+function getWsJSON() {
+	return [{
+	}];
+}
+            var change = false;
+            var mode;
+            
+            var manualTimeout;
+            var pump = [];
+            var curFlow;
+            var trgFlow;
+            var curLevel = [];
+            var minLevel = [];
+            var trgLevel = [];
+            var maxLevel = [];
+            var panic;
+            var currentStat = {
+                // TODO: Make these values invalid?
+                "manualTimeout": 0,
+                "pump": [true, false, false, true],
+                "curFlow": 20,
+                "trgFlow": 40,
+                "curLevel": [25, 35, 45],
+                "trgLevel": [30, 45, 60],
+                "minLevel": [0, 0, 0],
+                "maxLevel": [80, 130, 180],
+                "panic": false
+            };
+            
+            var depth = [100, 150, 200];
+            var maxDepth = 0;
+            for (var i=0;i<3;i++) maxDepth = Math.max(maxDepth, depth[i]);
+            
+            function updateInterface(stateJSON) {
+                // update manual override indicators
+                manualTimeout = stateJSON.manualTimeout;
+                mode = manualTimeout ? 'manual' : 'automatic';
+                document.getElementById('manual').style.visibility = mode=='manual' ? 'visible' : 'hidden';
+                document.getElementById('manualTimeout').value = manualTimeout;
+                
+                // update pump indicators
+                pump = stateJSON.pump;
+                for (var i=0;i<4;i++) {
+                    {% if login %}
+                    document.getElementById('pumpInput'+i).checked = pump[i];
+                    {% endif %}
+                    document.getElementById('pumpSymbol'+i).style.fill = pump[i] ? 'lime' : 'red';
+                }
+                
+                // update flow indicators
+                curFlow = stateJSON.curFlow;
+                trgFlow = stateJSON.trgFlow;
+                document.getElementById('curFlow').innerHTML = curFlow;
+                {% if login %}
+                document.getElementById('trgFlow').value = trgFlow;
+                {% else %}
+                document.getElementById('trgFlow').innerHTML = trgFlow;
+                {% endif %}
+                
+                // update level indicators
+                curLevel = stateJSON.curLevel;
+                trgLevel = stateJSON.trgLevel;
+                minLevel = stateJSON.minLevel;
+                maxLevel = stateJSON.maxLevel;
+                for (var i=0;i<3;i++) {
+                    document.getElementById('curLevel' + i).innerHTML = curLevel[i];
+                    document.getElementById('bassin' + i).setAttribute("y", depth[i] - curLevel[i]);
+                    document.getElementById('bassin' + i).setAttribute("height", curLevel[i]);
+                    document.getElementById('trgLevel' + i).{{ 'value' if login else 'innerHTML' }} = trgLevel[i];
+                    document.getElementById('trgLevelLine' + i).setAttribute("y1", depth[i] - trgLevel[i]);
+                    document.getElementById('trgLevelLine' + i).setAttribute("y2", depth[i] - trgLevel[i]);
+                    document.getElementById('minLevel' + i).{{ 'value' if login else 'innerHTML' }} = minLevel[i];
+                    document.getElementById('minLevel' + i).setAttribute("max", maxLevel[i]);
+                    document.getElementById('minLevelLine' + i).setAttribute("y1", depth[i] - minLevel[i]);
+                    document.getElementById('minLevelLine' + i).setAttribute("y2", depth[i] - minLevel[i]);
+                    document.getElementById('maxLevel' + i).{{ 'value' if login else 'innerHTML' }} = maxLevel[i];
+                    document.getElementById('maxLevel' + i).setAttribute("min", minLevel[i]);
+                    document.getElementById('maxLevelLine' + i).setAttribute("y1", depth[i] - maxLevel[i]);
+                    document.getElementById('maxLevelLine' + i).setAttribute("y2", depth[i] - maxLevel[i]);
+                }
+                
+                panic = stateJSON.panic;
+                if (panic) alert('panic');
+            };
+            
+            {% if login %}
+            function setChanged() {
+                if (!change) {
+                    change = true;
+                    document.getElementById('save').style.visibility = 'visible';
+                }
+            }
+            
+            function saveSettings() {
+                var cmdJSON = {
+                    "battery": "{{id}}",
+                    "manualTimeout": mode=='manual' ? manualTimeout : 0,
+                    "pump": pump,
+                    "targetFlow": trgFlow,
+                    "targetLevel": trgLevel,
+                    "minLevel": minLevel,
+                    "maxLevel": maxLevel
+                };
+                socket.emit('command', cmdJSON);
+                alert('Instellingen naar bassins verstuurd...');
+                document.getElementById('save').style.visibility = 'hidden';
+                change = false;
+            }
+            
+            function setTrgFlow(value) {
+                trgFlow = parseInt(value);
+                setChanged();
+            }
+            
+            function setTrgLevel(i, value) {
+                trgLevel[i] = parseInt(value);
+                document.getElementById('trgLevelLine' + i).setAttribute("y1", depth[i] - value);
+                document.getElementById('trgLevelLine' + i).setAttribute("y2", depth[i] - value);
+                setChanged();
+            }
+            
+            function setMinLevel(i, value) {
+                minLevel[i] = parseInt(value);
+                document.getElementById('minLevelLine' + i).setAttribute("y1", depth[i] - value);
+                document.getElementById('minLevelLine' + i).setAttribute("y2", depth[i] - value);
+                if (trgLevel[i] < parseInt(value)) {
+                    trgLevel[i] = parseInt(value);
+                    document.getElementById('trgLevel' + i).value = trgLevel[i];
+                    document.getElementById('trgLevelLine' + i).setAttribute("y1", depth[i] - value);
+                    document.getElementById('trgLevelLine' + i).setAttribute("y2", depth[i] - value);
+                }
+                document.getElementById('trgLevel' + i).setAttribute("min", value);
+                document.getElementById('maxLevel' + i).setAttribute("min", value);
+                setChanged();
+            }
+            
+            function setMaxLevel(i, value) {
+                maxLevel[i] = parseInt(value);
+                document.getElementById('maxLevelLine' + i).setAttribute("y1", depth[i] - value);
+                document.getElementById('maxLevelLine' + i).setAttribute("y2", depth[i] - value);
+                if (trgLevel[i] > parseInt(value)) {
+                    trgLevel[i] = parseInt(value);
+                    document.getElementById('trgLevel' + i).value = trgLevel[i];
+                    document.getElementById('trgLevelLine' + i).setAttribute("y1", depth[i] - value);
+                    document.getElementById('trgLevelLine' + i).setAttribute("y2", depth[i] - value);
+                }
+                document.getElementById('trgLevel' + i).setAttribute("max", value);
+                document.getElementById('minLevel' + i).setAttribute("max", value);
+                setChanged();
+            }
+            
+            function togglePump(i) {
+                if (mode=='manual' || confirm('Wil je de pompen handmatig instellen?')) {
+                    pump[i] = !pump[i];
+                    document.getElementById('pumpSymbol' + i).style.fill = pump[i] ? 'lime' : 'red';
+                    mode = 'manual';
+                    document.getElementById('manual').style.visibility = mode=='manual' ? 'visible' : 'hidden';
+                    document.getElementById('manualTimeout').value = 60;
+                    setChanged();
+                }
+                else {
+                    document.getElementById('pumpInput' + i).checked = pump[i];
+                }
+            }
+            
+            function setManualTimeout(value) {
+                manualTimeout = parseInt(value);
+                setChanged();
+            }
+            {% endif %}
+            
+            function init() {
+                for (var i=0;i<3;i++) document.getElementById('bassin'+i).setAttribute("y", depth[i]);
+                document.getElementById('floor').setAttribute('d', 'M 0,0 l 0,100 100,0 0,-100, 50,0 0,' + depth[0] + ' 400,0 0,-' + depth[0] + ' 50,0 0,' + depth[1] + ' 400,0 0,-' + depth[1] + ' 50,0 0,' + depth[2] + ' 400,0 0,-' + depth[2] + ' 50,0 0,100 100,0 0,-100');
+                for (var i=0;i<4;i++) document.getElementById('pumpSymbol' + i).setAttribute('cy', maxDepth + 25);
+                document.getElementById('pipe0').setAttribute('d', 'M 80,100 80,' + (maxDepth+20) + ' 170,' + (maxDepth+20) + ' 170,' + depth[0] + ' 180,' + depth[0] + ' 180,' + (maxDepth+30) + ' 70,' + (maxDepth+30) + ' 70,100');
+                document.getElementById('pipe1').setAttribute('d', 'M 530,' + depth[0] + ' 530,' + (maxDepth+20) + ' 620,' + (maxDepth+20) + ' 620,' + depth[1] + ' 630,' + depth[1] + ' 630,' + (maxDepth+30) + ' 520,' + (maxDepth+30) + ' 520,' + depth[0] + '');
+                document.getElementById('pipe2').setAttribute('d', 'M 980,' + depth[1] + ' 980,' + (maxDepth+20) + ' 1070,' + (maxDepth+20) + ' 1070,' + depth[2] + ' 1080,' + depth[2] + ' 1080,' + (maxDepth+30) + ' 970,' + (maxDepth+30) + ' 970,' + depth[1] + '');
+                document.getElementById('pipe3').setAttribute('d', 'M 1430,' + depth[2] + ' 1430,' + (maxDepth+20) + ' 1520,' + (maxDepth+20) + ' 1520,100 1530,100 1530,' + (maxDepth+30) + ' 1420,' + (maxDepth+30) + ' 1420,' + depth[2] + '');
+                
+                updateInterface(currentStat);
+                document.getElementById('save').style.visibility = 'hidden';
+                change = false;
+            }
+        </script>
+        <script>
+            var socket;
+            $(function() {
+                socket = io();
+                $('form').submit(function() {
+                    socket.emit('command', JSON.parse($('#m').val()));
+                    return false;
+                });
+                socket.on('status', function(msg) {
+                    $('#output').append(JSON.stringify(msg) + '\n');
+                    currentStat = stat;
+                    updateInterface(stat);
+                });
+                socket.on('message', function(msg) {
+                    $('#output').append(JSON.stringify(msg) + '\n');
+                });
+				init();
+            });
+        </script>
+{% endblock %}
+
+{% block body %}
+
+{% if id %}
+        <svg id="bassins" width="800" height="200" viewBox="0 0 1700 300" version="1.1" >
+            <g transform="translate(50,0)">
+                <text x="50" y="0" font-size="36" fill="black" style="text-anchor:middle;">aanvoer</text>
+                <text x="350" y="0" font-size="36" fill="black" style="text-anchor:middle;">bassin {{id}}.1</text>
+                <text x="800" y="0" font-size="36" fill="black" style="text-anchor:middle;">bassin {{id}}.2</text>
+                <text x="1250" y="0" font-size="36" fill="black" style="text-anchor:middle;">bassin {{id}}.3</text>
+                <text x="1550" y="0" font-size="36" fill="black" style="text-anchor:middle;">afvoer</text>
+            </g>
+            <g transform="translate(50,50)">
+                <rect id="inlet" x="0" y="50" width="100" height="50" fill="#00ffff" />
+                <rect id="outlet" x="1500" y="50" width="100" height="50" fill="#00ffff" />
+                <rect id="bassin0" x="150" y="0" width="400" height="0" fill="#00ffff" />
+                <rect id="bassin1" x="600" y="0" width="400" height="0" fill="#00ffff" />
+                <rect id="bassin2" x="1050" y="0" width="400" height="0" fill="#00ffff" />
+                <line id="minLevelLine0" x1="150" y1="0" x2="550" y2="0" stroke-width="6px" stroke="#ff0000" />
+                <line id="maxLevelLine0" x1="150" y1="0" x2="550" y2="0" stroke-width="6px" stroke="#ff0000" />
+                <line id="trgLevelLine0" x1="150" y1="0" x2="550" y2="0" stroke-width="6px" stroke="#00cf00" />
+                <line id="minLevelLine1" x1="600" y1="0" x2="1000" y2="0" stroke-width="6px" stroke="#ff0000" />
+                <line id="maxLevelLine1" x1="600" y1="0" x2="1000" y2="0" stroke-width="6px" stroke="#ff0000" />
+                <line id="trgLevelLine1" x1="600" y1="0" x2="1000" y2="0" stroke-width="6px" stroke="#00cf00" />
+                <line id="minLevelLine2" x1="1050" y1="0" x2="1450" y2="0" stroke-width="6px" stroke="#ff0000" />
+                <line id="maxLevelLine2" x1="1050" y1="0" x2="1450" y2="0" stroke-width="6px" stroke="#ff0000" />
+                <line id="trgLevelLine2" x1="1050" y1="0" x2="1450" y2="0" stroke-width="6px" stroke="#00cf00" />
+                <path id="floor" style="fill:none;stroke:#000000;stroke-width:2px;" />
+                <path id="pipe0" style="fill:#00ffff;stroke:#000000;stroke-width:2px;" />
+                <path id="pipe1" style="fill:#00ffff;stroke:#000000;stroke-width:2px;" />
+                <path id="pipe2" style="fill:#00ffff;stroke:#000000;stroke-width:2px;" />
+                <path id="pipe3" style="fill:#00ffff;stroke:#000000;stroke-width:2px;" />
+                <circle id="pumpSymbol0" cx="125" cy="0" r="25" style="fill:grey;stroke:#000000;stroke-width:2px;" />
+                <circle id="pumpSymbol1" cx="575" cy="0" r="25" style="fill:grey;stroke:#000000;stroke-width:2px;" />
+                <circle id="pumpSymbol2" cx="1025" cy="0" r="25" style="fill:grey;stroke:#000000;stroke-width:2px;" />
+                <circle id="pumpSymbol3" cx="1475" cy="0" r="25" style="fill:grey;stroke:#000000;stroke-width:2px;" />
+            </g>
+        </svg>
+        <!-- TODO
+        <div id="pumpLegend0">if ($login) echo '<input id="pumpInput0" type="checkbox" onchange="togglePump(0);" /> 'pomp <?=4*($id-1)+1?></div>
+        <div id="pumpLegend1">if ($login) echo '<input id="pumpInput1" type="checkbox" onchange="togglePump(1);" /> 'pomp <?=4*($id-1)+2?></div>
+        <div id="pumpLegend2">if ($login) echo '<input id="pumpInput2" type="checkbox" onchange="togglePump(2);" /> 'pomp <?=4*($id-1)+3?></div>
+        <div id="pumpLegend3">if ($login) echo '<input id="pumpInput3" type="checkbox" onchange="togglePump(3);" /> 'pomp <?=4*($id-1)+4?></div>
+        -->
+        <div style="position: relative; height: 50px">
+        <div id="pumpLegend0"><input id="pumpInput0" type="checkbox" onchange="togglePump(0);" />pomp 1</div>
+        <div id="pumpLegend1"><input id="pumpInput1" type="checkbox" onchange="togglePump(1);" />pomp 2</div>
+        <div id="pumpLegend2"><input id="pumpInput2" type="checkbox" onchange="togglePump(2);" />pomp 3</div>
+        <div id="pumpLegend3"><input id="pumpInput3" type="checkbox" onchange="togglePump(3);" />pomp 4</div>
+        </div>
+        <table>
+            <tr>
+                <td style="border:none;"></td>
+                <th>actueel</th>
+                <th>doel</th>
+                <th>minimum</th>
+                <th>maximum</th>
+            </tr>
+            <tr style="height:2em;">
+                <td>niveau {{id}}.1 (cm)</td>
+                <td id="curLevel0"></td>
+{% if login %}
+                <td><input type="number" id="trgLevel0" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(0, this.value);" /></td>
+                <td><input type="number" id="minLevel0" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(0, this.value);" /></td>
+                <td><input type="number" id="maxLevel0" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(0, this.value);" /></td>
+{% else %}
+                <td id="trgLevel0"></td>
+                <td id="minLevel0"></td>
+                <td id="maxLevel0"></td>
+{% endif %}
+            </tr>
+            <tr style="height:2em;">
+                <td>niveau {{id}}.2 (cm)</td>
+                <td id="curLevel1"></td>
+{% if login %}
+                <td><input type="number" id="trgLevel1" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(1, this.value);" /></td>
+                <td><input type="number" id="minLevel1" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(1, this.value);" /></td>
+                <td><input type="number" id="maxLevel1" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(1, this.value);" /></td>
+{% else %}
+                <td id="trgLevel1"></td>
+                <td id="minLevel1"></td>
+                <td id="maxLevel1"></td>
+{% endif %}
+            </tr>
+            <tr style="height:2em;">
+                <td>niveau {{ id }}.3 (cm)</td>
+                <td id="curLevel2"></td>
+{% if login %}
+                <td><input type="number" id="trgLevel2" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(1, this.value);" /></td>
+                <td><input type="number" id="minLevel2" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(2, this.value);" /></td>
+                <td><input type="number" id="maxLevel2" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(2, this.value);" /></td>
+{% else %}
+                <td id="trgLevel2"></td>
+                <td id="minLevel2"></td>
+                <td id="maxLevel2"></td>
+{% endif %}
+            </tr>
+            <tr style="height:2em;">
+                <td>debiet {{ id }} (m³/u)</td>
+                <td id="curFlow"></td>
+{% if login %}
+                <td><input type="number" id="trgFlow" value="0" min="0" max="80" style="width:100px; margin-left:0px;" oninput="setTrgFlow(this.value);" /></td>
+{% else %}
+                <td id="trgFlow"></td>
+{% endif %}
+            </tr>
+        </table>
+        <br/>
+        <div id="manual" style="height:2em;">Handbediening gaat weer uit over <input type="number" id="manualTimeout" style="width:60px" value="60" min="5" max="240" onchange="setManualTimeout(this);"/> minuten</div>
+        <div id="save">Wijzigingen <input type="button" style="color:red;" value="annuleren" onclick="init();" /><input type="button" style="color:red;" value="doorvoeren" onclick="saveSettings();" /></div>
+{% endif %}
 
     <pre id="output"></pre>
 
