@@ -145,7 +145,7 @@ public:
     targetLevel = 0;
     currentLevel = 0;
     minLevel = 0;
-    maxLevel = 1.6; // Max sensor reading
+    maxLevel = 106; // Max sensor reading
   }
 
   double getCurrentLevel() {
