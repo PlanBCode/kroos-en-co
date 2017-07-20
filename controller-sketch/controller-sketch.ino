@@ -135,7 +135,7 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
         return;
     }
 
-    int downlinkBatId = buf[0] >> 4;
+    unsigned downlinkBatId = buf[0] >> 4;
     if (downlinkBatId >= lengthof(battery)) {
         Serial.println("Invalid battery index");
         return;
@@ -245,9 +245,9 @@ void loop() {
     os_runloop_once();
     unsigned long now = millis();
     if (lastTx == 0 || now - lastTx > TX_INTERVAL) {
-        for(int i=0;i<lengthof(battery);i++) battery[i]->doCycle(lastTx, now); queueUplink();
+        for(size_t i=0;i<lengthof(battery);i++) battery[i]->doCycle(lastTx, now); queueUplink();
         lastTx = now;
     }
-    for(int i=0;i<lengthof(battery);i++) battery[i]->doLoop(lastTx, now);
+    for(size_t i=0;i<lengthof(battery);i++) battery[i]->doLoop(lastTx, now);
 }
 
