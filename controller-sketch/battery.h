@@ -261,9 +261,7 @@ public:
     printf("SetManualTimeout: %u\n", timeout);
     // When called after doCycle(), this might cut the timeout a little
     // bit short (max TX_INTERVAL)
-    if (timeout>0) {
-      manualTimeout = timeout*60000;
-    }
+    manualTimeout = timeout*60000;
   }
 
   unsigned int getManualTimeout() {
