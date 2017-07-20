@@ -2,6 +2,10 @@
 
 #define lengthof(x) (sizeof(x)/sizeof(*x))
 
+#ifndef LMIC_PRINTF_TO
+#error "printfs need LMIC_PRINTF_TO, or they will crash"
+#endif
+
 const unsigned long TX_INTERVAL = 5 * 60000UL;
 
 class FlowController {
@@ -34,6 +38,7 @@ public:
   }
 
   void setTargetFlow(double value) {
+    printf("SetTargetFlow: %d\n", (int)value);
     targetFlow = value;
   }
 
@@ -51,11 +56,13 @@ public:
   }
 
   void setPumpState(bool state) {
+    printf("SetPumpState: %d\n", (int)state);
     digitalWrite(pumpPin, state);
   }
 
   bool doCycle(unsigned long /* now */, bool manual) {
     currentFlow = flowCounter / pulsesPerM2 * (3600000/TX_INTERVAL);
+    printf("Pulses: %d, flow/100: %d\n", flowCounter, (int)(currentFlow/100));
     flowCounter = 0;
 
     if (!manual) {
@@ -63,18 +70,24 @@ public:
         int todo = (unsigned int)targetCount - flowCounter;
         // If we haven't reached the target by the end of the cycle,
         // reset to prevent building up backlog
-        if (todo > 0)
+        if (todo > 0) {
+          printf("Did not reach flow target\n");
           targetCount = flowCounter;
+        }
 
         // targetCount is a double, so it preserves fractional pulses
         // across cycles
         targetCount += targetFlow*(TX_INTERVAL/3600000);
         todo = (unsigned int)targetCount - flowCounter;
 
+        printf("Flow pulses target/100: %d todo: %d\n", (int)(targetCount/100), todo);
+
         // If we're leaking more than the intended flow, reset to
         // prevent building up backlog
-        if (todo < 0)
+        if (todo < 0) {
+          printf("Leakage exceeds target flow\n");
           targetCount = flowCounter;
+        }
 
         if (todo) {
           digitalWrite(pumpPin, HIGH);
@@ -89,7 +102,10 @@ public:
   void doLoop(unsigned long lastCycle, unsigned long now, bool manual) {
     int sensorState = digitalRead(sensorPin);
     if (sensorState != lastSensorState) {
-      if (sensorState == HIGH) flowCounter++;
+      if (sensorState == HIGH) {
+        printf("Flow pulse\n");
+        flowCounter++;
+      }
       lastSensorState = sensorState;
     }
 
@@ -100,6 +116,7 @@ public:
           digitalWrite(pumpPin, LOW);
           // Calculate how long the pump has been on
           pumpState = (now - lastCycle) * 255 / TX_INTERVAL;
+          printf("Flow target reached, duty cycle was %d\n", pumpState);
         }
       }
     }
@@ -153,6 +170,7 @@ public:
   }
 
   void setTargetLevel(double value) {
+    printf("SetTargetLevel: %d\n", (int)value);
     targetLevel = value;
   }
   double getTargetLevel() {
@@ -160,6 +178,7 @@ public:
   }
 
   void setMinLevel(double value) {
+    printf("SetMinLevel: %d\n", (int)value);
     minLevel = value;
   }
   double getMinLevel() {
@@ -167,6 +186,7 @@ public:
   }
 
   void setMaxLevel(double value) {
+    printf("SetMaxLevel: %d\n", (int)value);
     maxLevel = value;
   }
   double getMaxLevel() {
@@ -180,20 +200,25 @@ public:
   }
 
   void setPumpState(bool state) {
+    printf("SetPumpState: %d\n", (int)state);
     digitalWrite(pumpPin, state);
   }
 
   bool doCycle(unsigned long /* now */, bool manual) {
-    currentLevel = a*analogRead(sensorPin) + b;
+    uint16_t read = analogRead(sensorPin);
+    currentLevel = a*read + b;
+    printf("Level adc: %u, mm: %d\n", read, (int)(currentLevel / 10));
     if (currentLevel < minLevel || currentLevel > maxLevel) {
       return true;
     }
     else if (!manual) {
       // Store pumpstate over *previous* cycle
       pumpState = pidOutput * 255;
+      printf("Previous pump duty cycle %d\n", pumpState);
       // Calculate pump time for next cycle
       pid->Compute();
       pumpOnDuration = TX_INTERVAL*pidOutput;
+      printf("PID says dc: %d%%, on: %ds\n", (int)(pidOutput * 100), (int)(pumpOnDuration/1000));
       if (pumpOnDuration) {
         digitalWrite(pumpPin, HIGH);
       } else {
@@ -233,6 +258,7 @@ public:
   }
 
   void setManualTimeout(unsigned int timeout) {
+    printf("SetManualTimeout: %u\n", timeout);
     // When called after doCycle(), this might cut the timeout a little
     // bit short (max TX_INTERVAL)
     if (timeout>0) {
@@ -249,6 +275,7 @@ public:
     bool manual = (manualTimeout > 0);
     for (size_t i=0;i<lengthof(flow);i++) panic |= flow[i]->doCycle(now, manual);
     for (size_t i=0;i<lengthof(level);i++) panic |= level[i]->doCycle(now, manual);
+    printf("Manualtimeout: %d panic: %d\n", (int)manualTimeout, (int)panic);
     // TODO: Act on panic?
     return panic;
   }
