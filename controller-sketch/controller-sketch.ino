@@ -204,7 +204,7 @@ void queueUplink() {
     buf[20] = battery[uplinkBatId]->level[2]->getMaxLevel();
 
     // Prepare upstream data transmission at the next possible time.
-    LMIC_setTxData2(TX_PORT, buf, sizeof(buf), 0);
+    LMIC_setTxData2(TX_PORT + uplinkBatId, buf, sizeof(buf), 0);
 
     Serial.println(F("Packet queued"));
     uplinkBatId = 1 - uplinkBatId;
