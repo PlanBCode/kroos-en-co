@@ -12,6 +12,10 @@
 #include <lmic.h>
 #include <hal/hal.h>
 #include <SPI.h>
+#include "battery.h"
+
+Battery* battery[2];
+int uplinkBatId;
 
 // This EUI must be in little-endian format, so least-significant-byte
 // first. When copying an EUI from ttnctl output, this means to reverse
@@ -32,7 +36,7 @@ static const u1_t PROGMEM APPKEY[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0
 void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
 
 const uint8_t TX_PORT = 1;
-const unsigned long TX_INTERVAL = 5 * 60000UL;
+//const unsigned long TX_INTERVAL = 5 * 60000UL;
 unsigned long lastTx = 0;
 
 // Pin mapping
@@ -123,24 +127,80 @@ void handleDownlink(uint8_t *buf, uint8_t len) {
     for (uint8_t i = 0; i < len; ++i)
         printByte(buf[i]);
     Serial.println();
-    // TODO
+    
+    int downlinkBatId = buf[0];
+    if (buf[1]>0) {
+      battery[downlinkBatId]->setManualTimeout(buf[1]);
+      battery[downlinkBatId]->flow[1]->setPumpState(buf[2] & (1<<0));
+      battery[downlinkBatId]->level[0]->setPumpState(buf[2] & (1<<1));
+      battery[downlinkBatId]->level[1]->setPumpState(buf[2] & (1<<2));
+      battery[downlinkBatId]->level[2]->setPumpState(buf[2] & (1<<3));
+    }
+    battery[downlinkBatId]->flow[1]->setTargetFlow(buf[3]);
+    battery[downlinkBatId]->level[0]->setTargetLevel(buf[4]);
+    battery[downlinkBatId]->level[1]->setTargetLevel(buf[5]);
+    battery[downlinkBatId]->level[2]->setTargetLevel(buf[6]);
+    battery[downlinkBatId]->level[0]->setMinLevel(buf[7]);
+    battery[downlinkBatId]->level[1]->setMinLevel(buf[8]);
+    battery[downlinkBatId]->level[2]->setMinLevel(buf[9]);
+    battery[downlinkBatId]->level[0]->setMaxLevel(buf[10]);
+    battery[downlinkBatId]->level[1]->setMaxLevel(buf[11]);
+    battery[downlinkBatId]->level[2]->setMaxLevel(buf[12]);
 
     // Send an update ASAP
     lastTx = 0;
 }
 
 void queueUplink() {
-    // TODO
-    uint8_t buf[1];
-    buf[0] = 0x12;
-
+    uint8_t buf[19];
+    buf[0] = battery[uplinkBatId]->panic ? -1 : battery[uplinkBatId]->getManualTimeout();
+    buf[2] = battery[uplinkBatId]->flow[1]->getPumpState();
+    buf[3] = battery[uplinkBatId]->level[0]->getPumpState();
+    buf[4] = battery[uplinkBatId]->level[1]->getPumpState();
+    buf[5] = battery[uplinkBatId]->level[2]->getPumpState();
+    buf[6] = battery[uplinkBatId]->flow[1]->getCurrentFlow();
+    buf[7] = battery[uplinkBatId]->flow[1]->getTargetFlow();
+    buf[8] = battery[uplinkBatId]->level[0]->getCurrentLevel();
+    buf[9] = battery[uplinkBatId]->level[1]->getCurrentLevel();
+    buf[10] = battery[uplinkBatId]->level[2]->getCurrentLevel();
+    buf[11] = battery[uplinkBatId]->level[0]->getTargetLevel();
+    buf[12] = battery[uplinkBatId]->level[1]->getTargetLevel();
+    buf[13] = battery[uplinkBatId]->level[2]->getTargetLevel();
+    buf[14] = battery[uplinkBatId]->level[0]->getMinLevel();
+    buf[15] = battery[uplinkBatId]->level[1]->getMinLevel();
+    buf[16] = battery[uplinkBatId]->level[2]->getMinLevel();
+    buf[17] = battery[uplinkBatId]->level[0]->getMaxLevel();
+    buf[18] = battery[uplinkBatId]->level[1]->getMaxLevel();
+    buf[19] = battery[uplinkBatId]->level[2]->getMaxLevel();
+    
     // Prepare upstream data transmission at the next possible time.
     LMIC_setTxData2(TX_PORT, buf, sizeof(buf), 0);
 
     Serial.println(F("Packet queued"));
+    uplinkBatId = 1 - uplinkBatId;
 }
 
+#define SENSORPIN 2
+#define PUMPPIN 2
 void setup() {
+    battery[0] = new Battery();
+    battery[0]->attachFlowController(0, SENSORPIN);
+    battery[0]->attachFlowController(1, SENSORPIN, PUMPPIN);
+    battery[0]->attachLevelController(0, SENSORPIN, PUMPPIN);
+    battery[0]->attachLevelController(1, SENSORPIN, PUMPPIN);
+    battery[0]->attachLevelController(2, SENSORPIN, PUMPPIN);
+    battery[0]->attachLevelController(3, SENSORPIN, PUMPPIN);
+    
+    battery[1] = new Battery();
+    battery[1]->attachFlowController(0, SENSORPIN);
+    battery[1]->attachFlowController(1, SENSORPIN, PUMPPIN);
+    battery[1]->attachLevelController(0, SENSORPIN, PUMPPIN);
+    battery[1]->attachLevelController(1, SENSORPIN, PUMPPIN);
+    battery[1]->attachLevelController(2, SENSORPIN, PUMPPIN);
+    battery[1]->attachLevelController(3, SENSORPIN, PUMPPIN);
+    
+    uplinkBatId = 0;
+    
     Serial.begin(9600);
     Serial.println(F("Starting"));
 
@@ -153,12 +213,14 @@ void setup() {
     LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
 }
 
-
 void loop() {
     os_runloop_once();
     unsigned long now = millis();
     if (lastTx == 0 || now - lastTx > TX_INTERVAL) {
+        for(int i=0;i<2;i++) battery[i]->doCycle(now);
         queueUplink();
         lastTx = now;
     }
+    for(int i=0;i<2;i++) battery[i]->doLoop(now);
 }
+
