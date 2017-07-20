@@ -111,7 +111,8 @@ public:
   int sensorPin;
   // 5000mV, 1023 steps, 100Ohm, 0.15mA/cm
   double a=5000.0/1023/100/0.15;
-  double b=-3;
+  // Zero is 4mA
+  double b=-4/0.15;
   double currentLevel;
   double targetLevel;
   double minLevel;
