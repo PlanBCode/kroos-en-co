@@ -8,15 +8,16 @@ batteries = {}
 def setup():
     with app.app_context():
         db = app.get_db()
-        for dev, bats in app.config['DEVICES']:
+        for dev, bats in app.config['DEVICES'].items():
             for battery in bats:
                 batteries[battery] = {
-                    status: None,
-                    config: None,
+                    'status': None,
+                    'config': None,
                 }
-                configrow = database.get_most_recent('config')
+                configrow = database.get_most_recent(db, 'config', {'battery': battery})
                 if configrow:
-                    batteries[battery] = database.config_row_to_message(configrow)
+                    batteries[battery]['config'] = database.config_row_to_message(configrow)
+    app.logger.info("Startup state: %s", batteries)
 
 def status_matches_config(status, config):
     # TODO: Match pump 255 vs 1
@@ -32,24 +33,29 @@ def process_uplink(status):
     with app.app_context():
         db = app.get_db()
         database.insert_from_dict(db, 'status', values)
-    # See if the status matches the current config, and if not resend
-    # the config
-    config = batteries[status['battery']]
-    if not status_matches_config(status, config):
-        # Config does not match, resend
-        mqtt.send_command(app, config)
-        if config.ackTimestamp:
-            app.logger.warn("Received config does not match, but config was previously acked")
-            app.logger.warn("Received: %s", status)
-            app.logger.warn("Expected: %s", config)
-    else:
-        # Config matches, note it has been acked if not already
-        if not config.ackTimestamp:
-            database.update_from_dict(db, 'config', {ackTimestamp: datetime.now()})
+
+        # See if the status matches the current config, and if not resend
+        # the config
+        config = batteries[status['battery']]['config']
+        if config:
+            if not status_matches_config(status, config):
+                # Config does not match, resend
+                # TODO: Modify manualTimeout
+                mqtt.send_command(app, config)
+                if config['ackTimestamp']:
+                    app.logger.warn("Received config does not match, but config was previously acked")
+                    app.logger.warn("Received: %s", status)
+                    app.logger.warn("Expected: %s", config)
+            else:
+                # Config matches, note it has been acked if not already
+                if not config['ackTimestamp']:
+                    now = datetime.now()
+                    database.update_from_dict(db, 'config', {'ackTimestamp': now})
+                    config['ackTimestamp'] = now
     websocket.send_status(status)
 
 def process_command(cmd):
-    print('Received command: ' + str(cmd))
+    app.logger.info('Received command: %s', cmd)
     db = app.get_db()
     v = database.config_message_to_row(cmd)
     v.update({
@@ -61,7 +67,7 @@ def process_command(cmd):
     cur = database.insert_from_dict(db, 'config', v)
     db.commit()
     # Update last-known config
-    batteries[cmd['battery'].config] = database.config_row_to_message(v)
+    batteries[cmd['battery']]['config'] = database.config_row_to_message(v)
     # Send config to node
     mqtt.send_command(app, cmd)
 

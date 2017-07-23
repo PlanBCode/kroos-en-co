@@ -10,8 +10,8 @@ def on_connect(client, userdata, flags, rc):
     app = userdata['app']
     app.logger.info('MQTT connected')
     client.subscribe('+/devices/+/up')
-    client.subscribe('+/devices/+/events/activations')
-    client.subscribe('+/devices/+/events/down/sent')
+    #client.subscribe('+/devices/+/events/activations')
+    #client.subscribe('+/devices/+/events/down/sent')
 
 def on_disconnect(client, userdata, rc):
     app = userdata['app']
@@ -44,7 +44,8 @@ def on_message(client, userdata, mqtt_msg):
         return
 
     try:
-        process_data(app, msg, payload_raw)
+        if 'port' in msg:
+            process_data(app, msg, payload_raw)
     except Exception as e:
         app.logger.warn('Error processing MQTT packet\n' + str(e))
         raise
@@ -79,7 +80,7 @@ def device_to_battery(app, device, battery_num):
 	return app.config['DEVICES'][device][battery_num]
 
 def send_command(app, config):
-    app.logger.debug("Sending command: %s", str(status))
+    app.logger.debug("Sending command: %s", str(config))
     device, battery_num = battery_to_device(app, config['battery'])
 
     msg = {
@@ -94,7 +95,7 @@ def send_command(app, config):
     app.logger.debug("Publishing to topic %s: %s", topic, payload)
 
 def encode_command(msg):
-    raw = bytearray(13)
+    raw = bytearray(16)
     raw[0] = msg['manualTimeout'] >> 8;
     raw[1] = msg['manualTimeout'] & 0xff;
     raw[2] = msg['pump'][0]

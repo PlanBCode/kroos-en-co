@@ -13,26 +13,15 @@ function getWsJSON() {
             
             var manualTimeout;
             var pump = [];
-            var curFlow;
+            var curFlowIn;
+            var curFlowOut;
             var trgFlow;
             var curLevel = [];
             var minLevel = [];
             var trgLevel = [];
             var maxLevel = [];
             var panic;
-            var currentStat = {
-                // TODO: Make these values invalid?
-                "manualTimeout": 0,
-                "pump": [true, false, false, true],
-                "curFlow": 20,
-                "trgFlow": 40,
-                "curLevel": [25, 35, 45],
-                "trgLevel": [30, 45, 60],
-                "minLevel": [0, 0, 0],
-                "maxLevel": [80, 130, 180],
-                "panic": false
-            };
-            
+            var currentStat;
             var depth = [100, 150, 200];
             var maxDepth = 0;
             for (var i=0;i<3;i++) maxDepth = Math.max(maxDepth, depth[i]);
@@ -54,9 +43,11 @@ function getWsJSON() {
                 }
                 
                 // update flow indicators
-                curFlow = stateJSON.curFlow;
-                trgFlow = stateJSON.trgFlow;
-                document.getElementById('curFlow').innerHTML = curFlow;
+                curFlowIn = stateJSON.currentFlow[0];
+                curFlowOut = stateJSON.currentFlow[1];
+                trgFlow = stateJSON.targetFlow;
+                document.getElementById('curFlowIn').innerHTML = curFlowIn;
+                document.getElementById('curFlowOut').innerHTML = curFlowOut;
                 {% if login %}
                 document.getElementById('trgFlow').value = trgFlow;
                 {% else %}
@@ -64,8 +55,8 @@ function getWsJSON() {
                 {% endif %}
                 
                 // update level indicators
-                curLevel = stateJSON.curLevel;
-                trgLevel = stateJSON.trgLevel;
+                curLevel = stateJSON.currentLevel;
+                trgLevel = stateJSON.targetLevel;
                 minLevel = stateJSON.minLevel;
                 maxLevel = stateJSON.maxLevel;
                 for (var i=0;i<3;i++) {
@@ -85,8 +76,8 @@ function getWsJSON() {
                     document.getElementById('maxLevelLine' + i).setAttribute("y2", depth[i] - maxLevel[i]);
                 }
                 
+                if (stateJSON.panic && !panic) alert('panic');
                 panic = stateJSON.panic;
-                if (panic) alert('panic');
             };
             
             {% if login %}
@@ -107,6 +98,7 @@ function getWsJSON() {
                     "minLevel": minLevel,
                     "maxLevel": maxLevel
                 };
+                console.log(cmdJSON);
                 socket.emit('command', cmdJSON);
                 alert('Instellingen naar bassins verstuurd...');
                 document.getElementById('save').style.visibility = 'hidden';
@@ -184,23 +176,29 @@ function getWsJSON() {
                 document.getElementById('pipe2').setAttribute('d', 'M 980,' + depth[1] + ' 980,' + (maxDepth+20) + ' 1070,' + (maxDepth+20) + ' 1070,' + depth[2] + ' 1080,' + depth[2] + ' 1080,' + (maxDepth+30) + ' 970,' + (maxDepth+30) + ' 970,' + depth[1] + '');
                 document.getElementById('pipe3').setAttribute('d', 'M 1430,' + depth[2] + ' 1430,' + (maxDepth+20) + ' 1520,' + (maxDepth+20) + ' 1520,100 1530,100 1530,' + (maxDepth+30) + ' 1420,' + (maxDepth+30) + ' 1420,' + depth[2] + '');
                 
-                updateInterface(currentStat);
                 document.getElementById('save').style.visibility = 'hidden';
+                document.getElementById('manual').style.visibility = 'hidden';
                 change = false;
+            }
+            function reset() {
+                updateInterface(currentStat);
             }
         </script>
         <script>
             var socket;
             $(function() {
                 socket = io();
-                $('form').submit(function() {
-                    socket.emit('command', JSON.parse($('#m').val()));
-                    return false;
-                });
                 socket.on('status', function(msg) {
                     $('#output').append(JSON.stringify(msg) + '\n');
-                    currentStat = stat;
-                    updateInterface(stat);
+                    // TODO: if ignoring msg because of change and
+                    // config received is different from currentStat,
+                    // show a warning?
+                    // Deepcopy the object, otherwise updateInterface
+                    // keeps references to its contained arrays and will
+                    // change them.
+                    currentStat = jQuery.extend(true, {}, msg);
+                    if (!change)
+                        updateInterface(msg);
                 });
                 socket.on('message', function(msg) {
                     $('#output').append(JSON.stringify(msg) + '\n');
@@ -268,6 +266,10 @@ function getWsJSON() {
                 <th>maximum</th>
             </tr>
             <tr style="height:2em;">
+                <td>debiet in {{ id }} (m³/u)</td>
+                <td id="curFlowIn"></td>
+            </tr>
+            <tr style="height:2em;">
                 <td>niveau {{id}}.1 (cm)</td>
                 <td id="curLevel0"></td>
 {% if login %}
@@ -297,7 +299,7 @@ function getWsJSON() {
                 <td>niveau {{ id }}.3 (cm)</td>
                 <td id="curLevel2"></td>
 {% if login %}
-                <td><input type="number" id="trgLevel2" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(1, this.value);" /></td>
+                <td><input type="number" id="trgLevel2" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(2, this.value);" /></td>
                 <td><input type="number" id="minLevel2" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(2, this.value);" /></td>
                 <td><input type="number" id="maxLevel2" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(2, this.value);" /></td>
 {% else %}
@@ -307,23 +309,19 @@ function getWsJSON() {
 {% endif %}
             </tr>
             <tr style="height:2em;">
-                <td>debiet {{ id }} (m³/u)</td>
-                <td id="curFlow"></td>
+                <td>debiet uit {{ id }} (m³/u)</td>
+                <td id="curFlowOut"></td>
 {% if login %}
-                <td><input type="number" id="trgFlow" value="0" min="0" max="80" style="width:100px; margin-left:0px;" oninput="setTrgFlow(this.value);" /></td>
+                <td><input type="number" id="trgFlow" value="" min="0" max="80" style="width:100px; margin-left:0px;" oninput="setTrgFlow(this.value);" /></td>
 {% else %}
                 <td id="trgFlow"></td>
 {% endif %}
             </tr>
         </table>
         <br/>
-        <div id="manual" style="height:2em;">Handbediening gaat weer uit over <input type="number" id="manualTimeout" style="width:60px" value="60" min="5" max="240" onchange="setManualTimeout(this);"/> minuten</div>
-        <div id="save">Wijzigingen <input type="button" style="color:red;" value="annuleren" onclick="init();" /><input type="button" style="color:red;" value="doorvoeren" onclick="saveSettings();" /></div>
+        <div id="manual" style="height:2em;">Handbediening gaat weer uit over <input type="number" id="manualTimeout" style="width:60px" value="60" min="5" max="240" onchange="setManualTimeout(this.value);"/> minuten</div>
+        <div id="save">Wijzigingen <input type="button" style="color:red;" value="annuleren" onclick="reset();" /><input type="button" style="color:red;" value="doorvoeren" onclick="saveSettings();" /></div>
 {% endif %}
 
     <pre id="output"></pre>
-
-    <form action="">
-      <input id="m" autocomplete="off" /><button>Send</button>
-    </form>
 {% endblock %}

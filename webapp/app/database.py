@@ -54,11 +54,11 @@ def config_row_to_message(row):
       'ackTimestamp': row['ackTimestamp'],
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
-      'pump': [row['pump'][0], row['pump'][1], row['pump'][2], row['pump'][3]],
+      'pump': [row['pump0'], row['pump1'], row['pump2'], row['pump3']],
       'targetFlow': row['targetFlow'],
-      'targetLevel': [row['targetLevel0'], row['targetLevel1'], row['targetLevel2']],
-      'minLevel': [row['minLevel0'], row['minLevel1'], row['minLevel2']],
-      'maxLevel': [row['maxLevel0'], row['maxLevel1'], row['maxLevel2']],
+      'targetLevel': [row['targetLevel1'], row['targetLevel2'], row['targetLevel3']],
+      'minLevel': [row['minLevel1'], row['minLevel2'], row['minLevel3']],
+      'maxLevel': [row['maxLevel1'], row['maxLevel2'], row['maxLevel3']],
     }
 
 def status_message_to_row(msg):
@@ -109,14 +109,18 @@ def update_from_dict(db, table, values):
     """
     query = 'update {} set {}'.format(
         table,
-        ', '.join('set {}=?'.format(f) for f in values.keys()),
+        ', '.join('{}=?'.format(f) for f in values.keys()),
     )
     return db.execute(query, list(values.values()))
 
-def get_most_recent(db, table):
+def get_most_recent(db, table, values):
     """
     Get the most recent entry from the passed table, based on the timestamp field.
     """
-    query = 'select * from {} order by timestamp limit 1'.format(table)
-    c = db.execute(query)
-    return db.fetchone()
+    where = ''
+    if values:
+        where = 'where ' + ' and '.join('{}=?'.format(f) for f in values.keys())
+    query = 'select * from {} {} order by timestamp desc limit 1'.format(table, where)
+    print(query)
+    c = db.execute(query, list(values.values()))
+    return c.fetchone()

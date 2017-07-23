@@ -34,6 +34,8 @@ if not app.debug and app.config.get('ERRORS_TO', []):
 # core.app
 from . import mqtt, database, web, websocket
 
+core.setup()
+
 # This also runs the mqtt thread when doing e.g. initdb, but I could not
 # find an easy way around this.
 mqtt.run(app)

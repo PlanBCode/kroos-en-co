@@ -6,7 +6,7 @@ from . import core, app
 def index():
     context = {
         'login': True,
-        'id': 'lankheet-1',
+        'id': 'lankheet-2',
     }
     try:
         return flask.render_template('index.html', **context)
