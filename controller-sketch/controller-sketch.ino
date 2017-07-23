@@ -36,8 +36,8 @@ static const u1_t PROGMEM APPKEY[16] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0
 void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
 
 const uint8_t TX_PORT = 1;
-//const unsigned long TX_INTERVAL = 5 * 60000UL;
-unsigned long lastTx = 0;
+const uint8_t RX_PORT = 1;
+unsigned long lastCycleTime = 0;
 
 // Pin mapping
 const lmic_pinmap lmic_pins = {
@@ -92,7 +92,7 @@ void onEvent (ev_t ev) {
                 Serial.print(LMIC.dataLen);
                 Serial.println(F(" bytes of payload"));
                 uint8_t port = *(LMIC.frame + LMIC.dataBeg - 1);
-		handleDownlink(port, LMIC.frame + LMIC.dataBeg, LMIC.dataLen);
+	            	handleDownlink(port, LMIC.frame + LMIC.dataBeg, LMIC.dataLen);
             }
             break;
         case EV_LOST_TSYNC:
@@ -130,48 +130,46 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
         printByte(buf[i]);
     Serial.println();
 
-    if (port != 1 || len != 13) {
+    if (port < RX_PORT || port >= RX_PORT + lengthof(battery) || len != 16) {
         Serial.println("Skipping unknown or invalid packet");
         return;
     }
 
-    unsigned downlinkBatId = buf[0] >> 4;
-    if (downlinkBatId >= lengthof(battery)) {
-        Serial.println("Invalid battery index");
-        return;
-    }
+    unsigned downlinkBatId = port - RX_PORT;
 
-    uint16_t timeout = (buf[1] << 8) | buf[2];
+    uint16_t timeout = (buf[0] << 8) | buf[1];
     battery[downlinkBatId]->setManualTimeout(timeout);
     if (timeout > 0) {
-      battery[downlinkBatId]->level[0]->setPumpState(buf[0] & (1<<0));
-      battery[downlinkBatId]->level[1]->setPumpState(buf[0] & (1<<1));
-      battery[downlinkBatId]->level[2]->setPumpState(buf[0] & (1<<2));
-      battery[downlinkBatId]->flow[1]->setPumpState(buf[0] & (1<<3));
+      battery[downlinkBatId]->level[0]->setPumpState(buf[2]);
+      battery[downlinkBatId]->level[1]->setPumpState(buf[3]);
+      battery[downlinkBatId]->level[2]->setPumpState(buf[4]);
+      battery[downlinkBatId]->flow[1]->setPumpState(buf[5]);
     }
 
-    battery[downlinkBatId]->flow[1]->setTargetFlow(buf[3]);
+    battery[downlinkBatId]->flow[1]->setTargetFlow(buf[6]);
 
-    battery[downlinkBatId]->level[0]->setTargetLevel(buf[4]);
-    battery[downlinkBatId]->level[1]->setTargetLevel(buf[5]);
-    battery[downlinkBatId]->level[2]->setTargetLevel(buf[6]);
+    battery[downlinkBatId]->level[0]->setTargetLevel(buf[7]);
+    battery[downlinkBatId]->level[1]->setTargetLevel(buf[8]);
+    battery[downlinkBatId]->level[2]->setTargetLevel(buf[9]);
 
-    battery[downlinkBatId]->level[0]->setMinLevel(buf[7]);
-    battery[downlinkBatId]->level[1]->setMinLevel(buf[8]);
-    battery[downlinkBatId]->level[2]->setMinLevel(buf[9]);
+    battery[downlinkBatId]->level[0]->setMinLevel(buf[10]);
+    battery[downlinkBatId]->level[1]->setMinLevel(buf[11]);
+    battery[downlinkBatId]->level[2]->setMinLevel(buf[12]);
 
-    battery[downlinkBatId]->level[0]->setMaxLevel(buf[10]);
-    battery[downlinkBatId]->level[1]->setMaxLevel(buf[11]);
-    battery[downlinkBatId]->level[2]->setMaxLevel(buf[12]);
+    battery[downlinkBatId]->level[0]->setMaxLevel(buf[13]);
+    battery[downlinkBatId]->level[1]->setMaxLevel(buf[14]);
+    battery[downlinkBatId]->level[2]->setMaxLevel(buf[15]);
 
-    // Send an update ASAP
-    lastTx = 0;
+    battery[downlinkBatId]->panic = false;
 }
 
 void queueUplink() {
     uint8_t buf[21];
     // Timeout in minutes
-    uint16_t timeout = battery[uplinkBatId]->panic ? -1 : battery[uplinkBatId]->getManualTimeout();
+    uint16_t timeout = min(battery[uplinkBatId]->getManualTimeout(), 0xFFFF - 1);
+    if (battery[uplinkBatId]->panic) {
+      timeout = 0xFFFF;
+    }
     buf[0]  = timeout >> 8;
     buf[1]  = timeout;
 
@@ -207,25 +205,23 @@ void queueUplink() {
     LMIC_setTxData2(TX_PORT + uplinkBatId, buf, sizeof(buf), 0);
 
     Serial.println(F("Packet queued"));
-    uplinkBatId = 1 - uplinkBatId;
+    uplinkBatId = (uplinkBatId+1)%lengthof(battery);
 }
 
-#define SENSORPIN 2
-#define PUMPPIN 2
 void setup() {
     battery[0] = new Battery();
-    battery[0]->attachFlowController(0, SENSORPIN);
-    battery[0]->attachFlowController(1, SENSORPIN, PUMPPIN);
-    battery[0]->attachLevelController(0, SENSORPIN, PUMPPIN);
-    battery[0]->attachLevelController(1, SENSORPIN, PUMPPIN);
-    battery[0]->attachLevelController(2, SENSORPIN, PUMPPIN);
+    battery[0]->attachLevelController(0, A0, 23);
+    battery[0]->attachLevelController(1, A1, 25);
+    battery[0]->attachLevelController(2, A2, 27);
+    battery[0]->attachFlowController(0, 3);
+    battery[0]->attachFlowController(1, 4, 29);
 
     battery[1] = new Battery();
-    battery[1]->attachFlowController(0, SENSORPIN);
-    battery[1]->attachFlowController(1, SENSORPIN, PUMPPIN);
-    battery[1]->attachLevelController(0, SENSORPIN, PUMPPIN);
-    battery[1]->attachLevelController(1, SENSORPIN, PUMPPIN);
-    battery[1]->attachLevelController(2, SENSORPIN, PUMPPIN);
+    battery[1]->attachLevelController(0, A3, 31);
+    battery[1]->attachLevelController(1, A4, 33);
+    battery[1]->attachLevelController(2, A5, 35);
+    battery[1]->attachFlowController(0, 5);
+    battery[1]->attachFlowController(1, 8, 37);
 
     uplinkBatId = 0;
 
@@ -237,6 +233,10 @@ void setup() {
     // Reset the MAC state. Session and pending data transfers will be discarded.
     LMIC_reset();
 
+    // prevent a floating reset pin from triggering on random inductive signals
+    digitalWrite(lmic_pins.rst, HIGH);
+    pinMode(lmic_pins.rst, OUTPUT);
+
     // TODO: Less?
     LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
 }
@@ -244,10 +244,11 @@ void setup() {
 void loop() {
     os_runloop_once();
     unsigned long now = millis();
-    if (lastTx == 0 || now - lastTx > TX_INTERVAL) {
-        for(size_t i=0;i<lengthof(battery);i++) battery[i]->doCycle(lastTx, now); queueUplink();
-        lastTx = now;
+    if (lastCycleTime == 0 || now - lastCycleTime > CYCLE_INTERVAL) {
+        for(size_t i=0;i<lengthof(battery);i++) battery[i]->doCycle(now - lastCycleTime);
+        queueUplink();
+        lastCycleTime = now;
     }
-    for(size_t i=0;i<lengthof(battery);i++) battery[i]->doLoop(lastTx, now);
+    for(size_t i=0;i<lengthof(battery);i++) battery[i]->doLoop(now - lastCycleTime);
 }
 

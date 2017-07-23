@@ -2,11 +2,16 @@
 
 #define lengthof(x) (sizeof(x)/sizeof(*x))
 
+// set relais convention
+#define PUMP_ON LOW
+#define PUMP_OFF HIGH
+
 #ifndef LMIC_PRINTF_TO
 #error "printfs need LMIC_PRINTF_TO, or they will crash"
 #endif
 
-const unsigned long TX_INTERVAL = 5 * 60000UL;
+//const unsigned long CYCLE_INTERVAL = 5 * 60000UL;
+const unsigned long CYCLE_INTERVAL = 10000UL;
 
 class FlowController {
 public:
@@ -15,22 +20,26 @@ public:
 
   int sensorPin;
   int lastSensorState;
-  int flowCounter;
-  const double pulsesPerM2 = 1.0;
+  unsigned int flowCounter;
+  const double pulsesPerM3 = 200.0;
   double currentFlow;
   double targetFlow;
-  double targetCount;
+  uint32_t targetCount;
 
+  unsigned long lastPulseStart;
+
+  // pumpPin -1 means no pump is connected, only measure flow
   FlowController(int sensorPin, int pumpPin = -1) {
     this->sensorPin = sensorPin;
     this->pumpPin = pumpPin;
     pinMode(sensorPin, INPUT);
     if (pumpPin!=-1) {
+      digitalWrite(pumpPin, PUMP_OFF);
       pinMode(pumpPin, OUTPUT);
-      digitalWrite(pumpPin, LOW);
     }
-    flowCounter = 0;
-    targetFlow = 0;
+    flowCounter = 0.0;
+    targetFlow = 0.0;
+    targetCount = 0;
   }
 
   double getCurrentFlow() {
@@ -46,64 +55,49 @@ public:
     return targetFlow;
   }
 
-  /* Return the pump duty cycle over the previous cycle (when called
-   * directly after doCycle()). */
   double getPumpState() {
-    // Pump still on? Full duty cycle then
-    if (digitalRead(pumpPin) == HIGH)
-      return 255;
     return pumpState;
   }
 
   void setPumpState(bool state) {
     printf("SetPumpState: %d\n", (int)state);
-    digitalWrite(pumpPin, state);
+    digitalWrite(pumpPin, !state);
+    pumpState = state ? 255 : 0;
   }
 
-  bool doCycle(unsigned long /* now */, bool manual) {
-    currentFlow = flowCounter / pulsesPerM2 * (3600000/TX_INTERVAL);
-    printf("Pulses: %d, flow/100: %d\n", flowCounter, (int)(currentFlow/100));
+  bool doCycle(unsigned long prevDuration, bool manual) {
+    currentFlow = (flowCounter / pulsesPerM3) * (3600000/prevDuration);
+    Serial.print("3600000/prevDuration: ");
+    Serial.println(3600000/prevDuration);
+    Serial.print("flowCounter / pulsesPerM3: ");
+    Serial.println(flowCounter / pulsesPerM3);
+    Serial.print("currentFlow: ");
+    Serial.println(currentFlow);
+    printf("Flow pulses: %d, flow*100: %d\n", flowCounter, (int)(currentFlow*100));
     flowCounter = 0;
 
     if (!manual) {
       if (pumpPin != -1) {
-        int todo = (unsigned int)targetCount - flowCounter;
         // If we haven't reached the target by the end of the cycle,
-        // reset to prevent building up backlog
-        if (todo > 0) {
+        // doLoop won't have set pumpState
+        if (digitalRead(pumpPin) == PUMP_ON) {
           printf("Did not reach flow target\n");
-          targetCount = flowCounter;
+          pumpState = 255;
         }
-
-        // targetCount is a double, so it preserves fractional pulses
-        // across cycles
-        targetCount += targetFlow*(TX_INTERVAL/3600000);
-        todo = (unsigned int)targetCount - flowCounter;
-
-        printf("Flow pulses target/100: %d todo: %d\n", (int)(targetCount/100), todo);
-
-        // If we're leaking more than the intended flow, reset to
-        // prevent building up backlog
-        if (todo < 0) {
-          printf("Leakage exceeds target flow\n");
-          targetCount = flowCounter;
-        }
-
-        if (todo) {
-          digitalWrite(pumpPin, HIGH);
-        } else {
-          digitalWrite(pumpPin, LOW);
-        }
+        targetCount = targetFlow * pulsesPerM3 / (3600000/CYCLE_INTERVAL);
+        digitalWrite(pumpPin, targetCount >= 1 ? PUMP_ON : PUMP_OFF);
+        printf("Flow pulses target*100: %d\n", (int)(targetCount*100));
       }
     }
     return false;
   }
 
-  void doLoop(unsigned long lastCycle, unsigned long now, bool manual) {
+  void doLoop(unsigned long durationSoFar, bool manual) {
     int sensorState = digitalRead(sensorPin);
     if (sensorState != lastSensorState) {
-      if (sensorState == HIGH) {
-        printf("Flow pulse\n");
+      if (sensorState == HIGH) lastPulseStart = millis();
+      if (sensorState == LOW && millis() - lastPulseStart > 10) {
+//        printf("Flow pulse\n");
         flowCounter++;
       }
       lastSensorState = sensorState;
@@ -111,11 +105,10 @@ public:
 
     if (!manual) {
       if (pumpPin != -1) {
-        int todo = (unsigned int)targetCount - flowCounter;
-        if (digitalRead(pumpPin) == HIGH && todo <= 0) {
-          digitalWrite(pumpPin, LOW);
+        if (digitalRead(pumpPin) == PUMP_ON && targetCount >= flowCounter) {
+          digitalWrite(pumpPin, PUMP_OFF);
           // Calculate how long the pump has been on
-          pumpState = (now - lastCycle) * 255 / TX_INTERVAL;
+          pumpState = durationSoFar * 255 / CYCLE_INTERVAL;
           printf("Flow target reached, duty cycle was %d\n", pumpState);
         }
       }
@@ -141,24 +134,25 @@ public:
 
   PID* pid;
   double pidOutput;
-  double Kp=10, Ki=0.001, Kd=0;
+  const double Kp=10, Ki=0.001, Kd=0;
 
   LevelController(int sensorPin, int pumpPin) {
     this->sensorPin = sensorPin;
     this->pumpPin = pumpPin;
 
     pinMode(pumpPin, OUTPUT);
-    digitalWrite(pumpPin, LOW);
+    digitalWrite(pumpPin, PUMP_OFF);
 
     pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, DIRECT);
     // The library expects ms, so divides this by 1000 so the Ki/Kd
     // values are per second. However, 5 minutes in ms overflows an int,
     // so scale by 60 here. The Ki/Kd values become per minute from
     // this.
-    pid->SetSampleTime(TX_INTERVAL / 60);
+    pid->SetSampleTime(CYCLE_INTERVAL / 60);
     pid->SetMode(AUTOMATIC);
     pid->SetOutputLimits(0, 1);
 
+    pidOutput = 0.0;
     targetLevel = 0;
     currentLevel = 0;
     minLevel = 0;
@@ -173,6 +167,7 @@ public:
     printf("SetTargetLevel: %d\n", (int)value);
     targetLevel = value;
   }
+  
   double getTargetLevel() {
     return targetLevel;
   }
@@ -181,6 +176,7 @@ public:
     printf("SetMinLevel: %d\n", (int)value);
     minLevel = value;
   }
+  
   double getMinLevel() {
     return minLevel;
   }
@@ -189,6 +185,7 @@ public:
     printf("SetMaxLevel: %d\n", (int)value);
     maxLevel = value;
   }
+  
   double getMaxLevel() {
     return maxLevel;
   }
@@ -201,13 +198,15 @@ public:
 
   void setPumpState(bool state) {
     printf("SetPumpState: %d\n", (int)state);
-    digitalWrite(pumpPin, state);
+    digitalWrite(pumpPin, !state);
+    pumpState = state ? 255 : 0;
   }
-
-  bool doCycle(unsigned long /* now */, bool manual) {
+  
+  // return value true means panic
+  bool doCycle(unsigned long /* duration */, bool manual) {
     uint16_t read = analogRead(sensorPin);
     currentLevel = a*read + b;
-    printf("Level adc: %u, mm: %d\n", read, (int)(currentLevel / 10));
+    printf("Level adc: %u, mm: %d\n", read, (int)(currentLevel * 10));
     if (currentLevel < minLevel || currentLevel > maxLevel) {
       return true;
     }
@@ -217,21 +216,21 @@ public:
       printf("Previous pump duty cycle %d\n", pumpState);
       // Calculate pump time for next cycle
       pid->Compute();
-      pumpOnDuration = TX_INTERVAL*pidOutput;
-      printf("PID says dc: %d%%, on: %ds\n", (int)(pidOutput * 100), (int)(pumpOnDuration/1000));
+      pumpOnDuration = CYCLE_INTERVAL*pidOutput;
+      printf("PID says target: %d dc: %d%%, on: %ds\n", (int)targetLevel, (int)(pidOutput * 100), (int)(pumpOnDuration/1000));
       if (pumpOnDuration) {
-        digitalWrite(pumpPin, HIGH);
+        digitalWrite(pumpPin, PUMP_ON);
       } else {
-        digitalWrite(pumpPin, LOW);
+        digitalWrite(pumpPin, PUMP_OFF);
       }
     }
     return false;
   }
 
-  void doLoop(unsigned long lastCycle, unsigned long now, bool manual) {
+  void doLoop(unsigned long durationSoFar, bool manual) {
     if (!manual) {
-      if (now - lastCycle > pumpOnDuration) {
-        digitalWrite(pumpPin, LOW);
+      if (durationSoFar > pumpOnDuration) {
+        digitalWrite(pumpPin, PUMP_OFF);
       }
     }
   }
@@ -260,7 +259,7 @@ public:
   void setManualTimeout(unsigned int timeout) {
     printf("SetManualTimeout: %u\n", timeout);
     // When called after doCycle(), this might cut the timeout a little
-    // bit short (max TX_INTERVAL)
+    // bit short (max CYCLE_INTERVAL)
     manualTimeout = timeout*60000;
   }
 
@@ -268,22 +267,21 @@ public:
     return manualTimeout / 60000;
   }
 
-  bool doCycle(unsigned long lastCycle, unsigned long now) {
-    manualTimeout -= min(manualTimeout, now - lastCycle);
+  bool doCycle(unsigned long prevDuration) {
+    manualTimeout -= min(manualTimeout, prevDuration);
     bool manual = (manualTimeout > 0);
-    for (size_t i=0;i<lengthof(flow);i++) panic |= flow[i]->doCycle(now, manual);
-    for (size_t i=0;i<lengthof(level);i++) panic |= level[i]->doCycle(now, manual);
-    printf("Manualtimeout: %d panic: %d\n", (int)manualTimeout, (int)panic);
+    for (size_t i=0;i<lengthof(flow);i++) panic |= flow[i]->doCycle(prevDuration, manual);
+    for (size_t i=0;i<lengthof(level);i++) panic |= level[i]->doCycle(prevDuration, manual);
+    printf("Manualtimeout: %lu panic: %d\n", manualTimeout, (int)panic);
     // TODO: Act on panic?
     return panic;
   }
 
-  void doLoop(unsigned long lastCycle, unsigned long now) {
-    bool manual = manualTimeout > 0 && manualTimeout < (now - lastCycle);
-    lastCycle = now;
+  void doLoop(unsigned long durationSoFar) {
+    bool manual = (manualTimeout > 0);
 
-    for (size_t i=0;i<lengthof(flow);i++) flow[i]->doLoop(lastCycle, now, manual);
-    for (size_t i=0;i<lengthof(level);i++) level[i]->doLoop(lastCycle, now, manual);
+    for (size_t i=0;i<lengthof(flow);i++) flow[i]->doLoop(durationSoFar, manual);
+    for (size_t i=0;i<lengthof(level);i++) level[i]->doLoop(durationSoFar, manual);
   }
 };
 
