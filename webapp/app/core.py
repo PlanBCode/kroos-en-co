@@ -5,6 +5,7 @@ from . import mqtt, websocket, database, app
 def process_uplink(status):
     app.logger.debug("Received status: %s", status)
     values = database.status_message_to_row(status)
+    values['timestamp'] = datetime.now()
     with app.app_context():
         db = app.get_db()
         database.insert_from_dict(db, 'status', values)
