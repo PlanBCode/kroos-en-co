@@ -55,7 +55,8 @@ def process_data(app, msg, payload_raw):
         app.logger.info("Ignoring message with unknown port %s", msg["port"])
         return
     app.logger.debug("Raw msg: %s", binascii.hexlify(payload_raw))
-    battery = device_to_battery(app, msg["dev_id"], msg["port"] - 1)
+    battery_num = msg["port"] - 1
+    battery = device_to_battery(app, msg["dev_id"], battery_num)
     status = decode_status(payload_raw)
     status['battery'] = battery
     app.logger.debug("Decoded status: %s", status)
@@ -82,9 +83,9 @@ def send_command(app, config):
     device, battery_num = battery_to_device(app, config['battery'])
 
     msg = {
-	"port": 1,
+	"port": 1 + battery_num,
 	"confirmed": False,
-	"payload_raw": base64.b64encode(encode_command(config, battery_num)).decode('ascii'),
+	"payload_raw": base64.b64encode(encode_command(config)).decode('ascii'),
 	"schedule": "replace",
     }
     topic = "{}/devices/{}/down".format(app.config['TTN_APP_ID'], device)
@@ -92,30 +93,24 @@ def send_command(app, config):
     app.mqtt.publish(topic, payload)
     app.logger.debug("Publishing to topic %s: %s", topic, payload)
 
-def encode_command(msg, battery_num):
+def encode_command(msg):
     raw = bytearray(13)
-    raw[0] = battery_num << 4;
-    if msg['manualTimeout'] > 0:
-        if msg['pump'][0]:
-            raw[0] |= (1 << 0)
-        if msg['pump'][1]:
-            raw[0] |= (1 << 2)
-        if msg['pump'][2]:
-            raw[0] |= (1 << 3)
-        if msg['pump'][3]:
-            raw[0] |= (1 << 4)
-    raw[1] = msg['manualTimeout'] >> 8;
-    raw[2] = msg['manualTimeout'] & 0xff;
-    raw[3] = msg['targetFlow'];
-    raw[4] = msg['targetLevel'][0];
-    raw[5] = msg['targetLevel'][1];
-    raw[6] = msg['targetLevel'][2];
-    raw[7] = msg['minLevel'][0];
-    raw[8] = msg['minLevel'][1];
-    raw[9] = msg['minLevel'][2];
-    raw[10] = msg['maxLevel'][0];
-    raw[11] = msg['maxLevel'][1];
-    raw[12] = msg['maxLevel'][2];
+    raw[0] = msg['manualTimeout'] >> 8;
+    raw[1] = msg['manualTimeout'] & 0xff;
+    raw[2] = msg['pump'][0]
+    raw[3] = msg['pump'][1]
+    raw[4] = msg['pump'][2]
+    raw[5] = msg['pump'][3]
+    raw[6] = msg['targetFlow'];
+    raw[7] = msg['targetLevel'][0];
+    raw[8] = msg['targetLevel'][1];
+    raw[9] = msg['targetLevel'][2];
+    raw[10] = msg['minLevel'][0];
+    raw[11] = msg['minLevel'][1];
+    raw[12] = msg['minLevel'][2];
+    raw[13] = msg['maxLevel'][0];
+    raw[14] = msg['maxLevel'][1];
+    raw[15] = msg['maxLevel'][2];
     return raw
 
 def decode_status(raw):
