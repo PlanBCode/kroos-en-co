@@ -4,7 +4,7 @@ import json
 import base64
 import binascii
 
-from . import database
+from . import core
 
 def on_connect(client, userdata, flags, rc):
     app = userdata['app']
@@ -59,13 +59,7 @@ def process_data(app, msg, payload_raw):
     status = decode_status(payload_raw)
     status['battery'] = battery
     app.logger.debug("Decoded status: %s", status)
-    values = database.status_message_to_row(status)
-    app.logger.debug("Inserting into db: %s", values)
-    with app.app_context():
-        db = app.get_db()
-        database.insert_from_dict(db, 'status', values)
-    # TODO: Limit to clients for this battery
-    app.socketio.emit('status', status, broadcast=True)
+    core.process_uplink(status)
 
 def mqtt_thread(client):
     client.loop_forever()
@@ -78,12 +72,13 @@ def battery_to_device(app, battery):
 		    if b == battery:
 			    return device, i
 	return None, None
-	
+
 def device_to_battery(app, device, battery_num):
 	""" Look up a battery id for the given device id and index."""
 	return app.config['DEVICES'][device][battery_num]
 
 def send_command(app, config):
+    app.logger.debug("Sending command: %s", str(status))
     device, battery_num = battery_to_device(app, config['battery'])
 
     msg = {
@@ -132,9 +127,9 @@ def decode_status(raw):
         status['panic'] = True
     status['pump'] = [raw[2], raw[3], raw[4], raw[5]]
     status['currentFlow'] = [raw[6], raw[7]]
-    status['targetFlow'] = raw[8]                                             
-    status['currentLevel'] = [raw[9], raw[10], raw[11]]                   
-    status['targetLevel'] = [raw[12], raw[13], raw[14]]                   
+    status['targetFlow'] = raw[8]
+    status['currentLevel'] = [raw[9], raw[10], raw[11]]
+    status['targetLevel'] = [raw[12], raw[13], raw[14]]
     status['minLevel'] = [raw[15], raw[16], raw[17]]
     status['maxLevel'] = [raw[18], raw[19], raw[20]]
     return status

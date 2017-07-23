@@ -1,18 +1,8 @@
 # all the imports
 import os
-from datetime import datetime
-from flask import Flask, request, session, g, redirect, url_for, abort, \
-     render_template, flash
-from flask_socketio import SocketIO, send, emit
-from threading import Thread
-from jinja2.parser import *
+import flask
 
-from . import mqtt, database
-
-
-app = Flask(__name__)
-app.config.from_object(__name__) # load config from this file , flaskr.py
-app.socketio = SocketIO(app)
+app = flask.Flask(__name__)
 
 # Defaults
 app.config.update(dict(
@@ -40,43 +30,10 @@ if not app.debug and app.config.get('ERRORS_TO', []):
     mail_handler.setLevel(logging.ERROR)
     app.logger.addHandler(mail_handler)
 
-@app.route('/')
-def index():
-    context = {
-        'login': True,
-        'id': 'lankheet-1',
-    }
-    try:
-        return render_template('index.html', **context)
-    except TemplateSyntaxError as e:
-        print(e.lineno)
+# Import these at the end, so they can access a completely setup
+# core.app
+from . import mqtt, database, web, websocket
 
-
-def send_message(message):
-    send(message)
-
-@app.socketio.on_error()
-def handle_error(e):
-    send_message('Fout in afhandeling: ' + str(e))
-    raise e
-
-# {"battery":0, "manualTimeout":0,"pump":[true,false,false,true],"targetFlow":"40","targetLevel":[30,45,60],"minLevel":[0,0,0],"maxLevel":[80,130,180]}
-@app.socketio.on('command')
-def handle_message(cmd):
-    print('received command: ' + str(cmd))
-    db = app.get_db()
-    v = database.config_message_to_row(cmd)
-    v.update({
-      'timestamp': datetime.now(),
-      'ackTimestamp': None,
-    })
-
-    cur = database.insert_from_dict(db, 'config', v)
-    db.commit()
-    send_message('Commando wordt zo snel mogelijk verstuurd')
-    mqtt.send_command(app, cmd)
-
-database.setup_db(app)
 # This also runs the mqtt thread when doing e.g. initdb, but I could not
 # find an easy way around this.
 mqtt.run(app)

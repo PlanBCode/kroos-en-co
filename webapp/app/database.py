@@ -1,31 +1,32 @@
 import sqlite3
 from flask import g
 
-def setup_db(app):
-    def get_db():
-        """Opens a new database connection if there is none yet for the
-        current application context.
-        """
-        if not hasattr(g, 'sqlite_db'):
-            g.sqlite_db = sqlite3.connect(app.config['DATABASE'])
-            g.sqlite_db.row_factory = sqlite3.Row
-        return g.sqlite_db
-    app.get_db = get_db
+from . import app
 
-    @app.teardown_appcontext
-    def close_db(error):
-        """Closes the database again at the end of the request."""
-        if hasattr(g, 'sqlite_db'):
-            g.sqlite_db.close()
+def get_db():
+    """Opens a new database connection if there is none yet for the
+    current application context.
+    """
+    if not hasattr(g, 'sqlite_db'):
+        g.sqlite_db = sqlite3.connect(app.config['DATABASE'])
+        g.sqlite_db.row_factory = sqlite3.Row
+    return g.sqlite_db
+app.get_db = get_db
 
-    @app.cli.command('initdb')
-    def initdb_command():
-        """Initializes the database."""
-        db = app.get_db()
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
-        print('Initialized the database.')
+@app.teardown_appcontext
+def close_db(error):
+    """Closes the database again at the end of the request."""
+    if hasattr(g, 'sqlite_db'):
+        g.sqlite_db.close()
+
+@app.cli.command('initdb')
+def initdb_command():
+    """Initializes the database."""
+    db = app.get_db()
+    with app.open_resource('schema.sql', mode='r') as f:
+        db.cursor().executescript(f.read())
+    db.commit()
+    print('Initialized the database.')
 
 def config_message_to_row(msg):
     return {
