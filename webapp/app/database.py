@@ -50,6 +50,8 @@ def config_message_to_row(msg):
 
 def config_row_to_message(row):
     return {
+      'timestamp': row['timestamp'],
+      'ackTimestamp': row['ackTimestamp'],
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
       'pump': [row['pump'][0], row['pump'][1], row['pump'][2], row['pump'][3]],
@@ -99,4 +101,22 @@ def insert_from_dict(db, table, values):
     )
     return db.execute(query, list(values.values()))
 
+def update_from_dict(db, table, values):
+    """
+    Create and execute an insert query using the keys from the passed dict as
+    field names and the values as the field values.  No escaping or checking
+    happens on the field and table names.
+    """
+    query = 'update {} set {}'.format(
+        table,
+        ', '.join('set {}=?'.format(f) for f in values.keys()),
+    )
+    return db.execute(query, list(values.values()))
 
+def get_most_recent(db, table):
+    """
+    Get the most recent entry from the passed table, based on the timestamp field.
+    """
+    query = 'select * from {} order by timestamp limit 1'.format(table)
+    c = db.execute(query)
+    return db.fetchone()
