@@ -1,17 +1,39 @@
-import sqlite3
 from flask import g
 
 from . import app
 
-def get_db():
+def get_sqlite_db():
     """Opens a new database connection if there is none yet for the
     current application context.
     """
+    import sqlite3
     if not hasattr(g, 'sqlite_db'):
         g.sqlite_db = sqlite3.connect(app.config['DATABASE'])
         g.sqlite_db.row_factory = sqlite3.Row
     return g.sqlite_db
-app.get_db = get_db
+
+def get_mysql_db():
+    """Opens a new database connection if there is none yet for the
+    current application context.
+    """
+    import pymysql
+
+    if not hasattr(g, 'mysql_db'):
+        g.mysql_db = pymysql.connect(
+            host=app.config['MYSQL_HOST'],
+            user=app.config['MYSQL_USERNAME'],
+            password=app.config['MYSQL_PASSWORD'],
+            db=app.config['MYSQL_DB'],
+            charset='utf8',
+            cursorclass=pymysql.cursors.DictCursor)
+    return g.mysql_db
+
+if 'MYSQL_DB' in app.config:
+        app.get_db = get_mysql_db
+        placeholder = '%s'
+else:
+        app.get_db = get_sqlite_db
+        placeholder = '?'
 
 @app.teardown_appcontext
 def close_db(error):
@@ -23,8 +45,9 @@ def close_db(error):
 def initdb_command():
     """Initializes the database."""
     db = app.get_db()
+    c = db.cursor()
     with app.open_resource('schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
+        c.execute(f.read())
     db.commit()
     print('Initialized the database.')
 
@@ -97,9 +120,12 @@ def insert_from_dict(db, table, values):
     query = 'insert into {}({}) values ({})'.format(
         table,
         ', '.join(values.keys()),
-        ', '.join(['?'] * len(values)),
+        ', '.join([placeholder] * len(values)),
     )
-    return db.execute(query, list(values.values()))
+    c = db.cursor()
+    c.execute(query, list(values.values()))
+    db.commit()
+    return c
 
 def update_from_dict(db, table, values):
     """
@@ -109,9 +135,12 @@ def update_from_dict(db, table, values):
     """
     query = 'update {} set {}'.format(
         table,
-        ', '.join('{}=?'.format(f) for f in values.keys()),
+        ', '.join('{}={}'.format(f, placeholder) for f in values.keys()),
     )
-    return db.execute(query, list(values.values()))
+    c = db.cursor()
+    c.execute(query, list(values.values()))
+    db.commit()
+    return c
 
 def get_most_recent(db, table, values):
     """
@@ -119,10 +148,10 @@ def get_most_recent(db, table, values):
     """
     where = ''
     if values:
-        where = 'where ' + ' and '.join('{}=?'.format(f) for f in values.keys())
+        where = 'where ' + ' and '.join('{}={}'.format(f, placeholder) for f in values.keys())
     query = 'select * from {} {} order by timestamp desc limit 1'.format(table, where)
-    print(query)
-    c = db.execute(query, list(values.values()))
+    c = db.cursor()
+    c.execute(query, list(values.values()))
     return c.fetchone()
 
 # vim: set sw=4 sts=4 expandtab:

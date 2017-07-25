@@ -10,5 +10,6 @@ setup(
 	'eventlet',
 	'paho-mqtt',
         'gunicorn',
+	'PyMySQL',
     ],
 )
