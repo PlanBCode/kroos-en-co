@@ -3,7 +3,7 @@ Setup
 Create virtual python environment with the `venv` module in the
 directory called `venv`, and activate it for the current shell:
 
-	python -m venv venv
+	python3 -m venv venv
 	source ./venv/bin/activate
 
 (alternatively, you can call commands inside the venv manually without
@@ -15,10 +15,18 @@ can edit the original files as normal).
 
 	pip install --editable .
 
-Populate database:
+This might show some errors like `Failed building wheel for foo`, which is not
+a problem, since it later retries these packages using another build method and
+should show `Running setup.py install for foo ... done`
+
+Create config:
+
+	cp config.py.tmpl config.py
+
+Change `config.py` with the needed values, then populate the database:
 
 	FLASK_APP=app FLASK_DEBUG=1 flask initdb
 
 Run server:
 
-	FLASK_DEBUG=1 gunicorn --reload --worker-class eventlet -w 1 app:app
+	FLASK_DEBUG=1 gunicorn --worker-class eventlet -w 1 app:app
