@@ -1,5 +1,6 @@
 # all the imports
 import os
+import sys
 import flask
 
 app = flask.Flask(__name__)
@@ -18,7 +19,10 @@ app.config.update(dict(
     }
 ))
 # Load config.py
-app.config.from_object('config')
+try:
+    app.config.from_object('config')
+except ImportError as e:
+    raise ImportError("Config file `config.py` not found. Copy `config.py.tmpl` to `config.py` and set values there.")
 
 if app.config.get('ERRORS_TO', []):
     import logging
