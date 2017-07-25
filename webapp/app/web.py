@@ -13,3 +13,4 @@ def index():
     except jinja2.TemplateSyntaxError as e:
         print(e.lineno)
 
+# vim: set sts=4 sw=4 expandtab:

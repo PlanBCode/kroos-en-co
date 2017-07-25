@@ -124,3 +124,5 @@ def get_most_recent(db, table, values):
     print(query)
     c = db.execute(query, list(values.values()))
     return c.fetchone()
+
+# vim: set sw=4 sts=4 expandtab:

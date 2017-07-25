@@ -148,3 +148,5 @@ def run(app):
     app.mqtt = client
 
     threading.Thread(target=mqtt_thread, args=(client,), daemon=True).start()
+
+# vim: set sts=4 sw=4 expandtab:

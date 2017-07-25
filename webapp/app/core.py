@@ -72,3 +72,5 @@ def process_command(cmd):
     mqtt.send_command(app, cmd)
 
     websocket.reply_message('Commando wordt zo snel mogelijk verstuurd')
+
+# vim: set sts=4 sw=4 expandtab:
