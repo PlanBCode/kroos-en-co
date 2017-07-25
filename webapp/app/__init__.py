@@ -20,7 +20,7 @@ app.config.update(dict(
 # Load config.py
 app.config.from_object('config')
 
-if not app.debug and app.config.get('ERRORS_TO', []):
+if app.config.get('ERRORS_TO', []):
     import logging
     from logging.handlers import SMTPHandler
     mail_handler = SMTPHandler('127.0.0.1',
