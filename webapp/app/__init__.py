@@ -38,10 +38,13 @@ if app.config.get('ERRORS_TO', []):
 # core.app
 from . import mqtt, database, web, websocket
 
-core.setup()
+# This is a hack to prevent running these when doing "flask initdb". There
+# seems to be no sane way to run a command only when actually running a server
+# (using flask run or inside gunicorn or whatever), so this just checks for
+# initdb explicitely.
+if 'initdb' not in sys.argv:
+    core.setup()
 
-# This also runs the mqtt thread when doing e.g. initdb, but I could not
-# find an easy way around this.
-mqtt.run(app)
+    mqtt.run(app)
 
 # vim: set sts=4 sw=4 expandtab:
