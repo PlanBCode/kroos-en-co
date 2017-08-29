@@ -27,6 +27,10 @@ Change `config.py` with the needed values, then populate the database:
 
 	FLASK_APP=app FLASK_DEBUG=1 flask initdb
 
-Run server:
+Run server locally:
 
 	FLASK_DEBUG=1 gunicorn --worker-class eventlet -w 1 app:app
+
+Or, to expose to the outside world, add a -b option:
+
+	FLASK_DEBUG=1 gunicorn --worker-class eventlet -w 1 app:app -b 0.0.0.0:8000
