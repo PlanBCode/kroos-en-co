@@ -47,7 +47,12 @@ def initdb_command():
     db = app.get_db()
     c = db.cursor()
     with app.open_resource('schema.sql', mode='r') as f:
-        c.execute(f.read())
+        # sqlite3 needs executescript to run multiple statements, Mysql
+        # can do it in a normal execute
+        if hasattr(c, 'executescript'):
+            c.executescript(f.read())
+        else:
+            c.execute(f.read())
     db.commit()
     print('Initialized the database.')
 
