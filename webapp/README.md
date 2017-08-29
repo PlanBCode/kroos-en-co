@@ -1,7 +1,9 @@
 Setup
 -----
 Create virtual python environment with the `venv` module in the
-directory called `venv`, and activate it for the current shell:
+directory called `venv`, and activate it for the current shell. This
+needs python3.5 or newer, so use `python3.5` or higher instead of
+`python3` if the latter is not new enough:
 
 	python3 -m venv venv
 	source ./venv/bin/activate
