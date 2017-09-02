@@ -11,5 +11,7 @@ setup(
 	'paho-mqtt',
         'gunicorn',
 	'PyMySQL',
+        'flask-user<0.7',
+        'flask-mail',
     ],
 )

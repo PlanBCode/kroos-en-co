@@ -12,4 +12,16 @@ ERRORS_FROM='noreply@kroos.co',
 #MYSQL_PASSWORD=''
 #MYSQL_DB=''
 
+# This assumes there is a mailserver running on localhost that
+# accepts an email on port 25. If this is not the case, you can
+# configure an external SMTP server here, which likely needs TLS and/or
+# authentication. See https://pythonhosted.org/Flask-Mail/
+MAIL_SERVER='localhost',
+#MAIL_PORT=25
+#MAIL_USE_TLS=True
+#MAIL_USERNAME=username
+#MAIL_PASSWORD=password
+MAIL_DEFAULT_SENDER='"Lankheet Krooscockpit" <noreply@kroos.co>',
+
+
 # vim: set sw=4 sts=4 expandtab:

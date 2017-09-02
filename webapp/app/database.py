@@ -1,6 +1,9 @@
 from flask import g
+from flask_sqlalchemy import SQLAlchemy
 
 from . import app
+
+sqla = SQLAlchemy(app)
 
 def get_sqlite_db():
     """Opens a new database connection if there is none yet for the
@@ -54,6 +57,7 @@ def initdb_command():
         else:
             c.execute(f.read())
     db.commit()
+    sqla.create_all();
     print('Initialized the database.')
 
 def config_message_to_row(msg):

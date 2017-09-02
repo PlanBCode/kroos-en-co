@@ -27,7 +27,14 @@ Create config:
 
 Change `config.py` with the needed values, then populate the database:
 
-	FLASK_APP=app FLASK_DEBUG=1 flask initdb
+	FLASK_APP=app flask initdb
+
+To create an initial user, send out an invitation using:
+
+	SERVER_NAME=localhost:8000 FLASK_APP=app flask initdb info@example.org
+
+`SERVER_NAME` is used to generate the activation link so might need to be
+changed. Of course also change the e-mail address passed to your own.
 
 Run server locally:
 
