@@ -1,4 +1,5 @@
 from datetime import datetime
+import flask_user
 
 from . import mqtt, websocket, database, app
 
@@ -72,6 +73,7 @@ def process_command(cmd):
     v.update({
       'timestamp': datetime.now(),
       'ackTimestamp': None,
+      'username': flask_user.current_user.username,
     })
 
     # Insert into database

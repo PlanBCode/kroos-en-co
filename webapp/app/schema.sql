@@ -4,6 +4,7 @@ create table config (
   `timestamp` timestamp,
   `ackTimestamp` timestamp,
   `battery` varchar(32),
+  `username` varchar(32),
   `manualTimeout` int,
   `pump0` boolean,
   `pump1` boolean,
