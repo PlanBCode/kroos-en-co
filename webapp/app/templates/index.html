@@ -4,10 +4,10 @@
     <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
     <script type="text/javascript" src="//code.jquery.com/jquery.js"></script>
     <script>
-function getWsJSON() {
-	return [{
-	}];
-}
+            function getWsJSON() {
+                    return [{
+                    }];
+            }
             var change = false;
             var mode;
 
@@ -203,7 +203,7 @@ function getWsJSON() {
                 socket.on('message', function(msg) {
                     $('#output').append(JSON.stringify(msg) + '\n');
                 });
-				init();
+                init();
             });
         </script>
 {% endblock %}
