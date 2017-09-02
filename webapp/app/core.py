@@ -33,10 +33,12 @@ def process_uplink(status):
     with app.app_context():
         db = app.get_db()
         database.insert_from_dict(db, 'status', values)
+        batteries[status['battery']]['status'] = status
 
         # See if the status matches the current config, and if not resend
         # the config
         config = batteries[status['battery']]['config']
+
         if config:
             if not status_matches_config(status, config):
                 # Config does not match, resend
