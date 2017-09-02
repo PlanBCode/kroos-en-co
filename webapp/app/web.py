@@ -1,11 +1,12 @@
 import jinja2
 import flask
+import flask_user
 from . import core, app
 
 @app.route('/')
 def index():
     context = {
-        'login': True,
+        'commands_allowed': flask_user.access.is_authenticated(),
         'id': 'lankheet-2',
     }
     try:

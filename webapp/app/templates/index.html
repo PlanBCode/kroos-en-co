@@ -36,7 +36,7 @@ function getWsJSON() {
                 // update pump indicators
                 pump = stateJSON.pump;
                 for (var i=0;i<4;i++) {
-                    {% if login %}
+                    {% if commands_allowed %}
                     document.getElementById('pumpInput'+i).checked = pump[i];
                     {% endif %}
                     document.getElementById('pumpSymbol'+i).style.fill = pump[i] ? 'lime' : 'red';
@@ -48,7 +48,7 @@ function getWsJSON() {
                 trgFlow = stateJSON.targetFlow;
                 document.getElementById('curFlowIn').innerHTML = curFlowIn;
                 document.getElementById('curFlowOut').innerHTML = curFlowOut;
-                {% if login %}
+                {% if commands_allowed %}
                 document.getElementById('trgFlow').value = trgFlow;
                 {% else %}
                 document.getElementById('trgFlow').innerHTML = trgFlow;
@@ -63,14 +63,14 @@ function getWsJSON() {
                     document.getElementById('curLevel' + i).innerHTML = curLevel[i];
                     document.getElementById('bassin' + i).setAttribute("y", depth[i] - curLevel[i]);
                     document.getElementById('bassin' + i).setAttribute("height", curLevel[i]);
-                    document.getElementById('trgLevel' + i).{{ 'value' if login else 'innerHTML' }} = trgLevel[i];
+                    document.getElementById('trgLevel' + i).{{ 'value' if commands_allowed else 'innerHTML' }} = trgLevel[i];
                     document.getElementById('trgLevelLine' + i).setAttribute("y1", depth[i] - trgLevel[i]);
                     document.getElementById('trgLevelLine' + i).setAttribute("y2", depth[i] - trgLevel[i]);
-                    document.getElementById('minLevel' + i).{{ 'value' if login else 'innerHTML' }} = minLevel[i];
+                    document.getElementById('minLevel' + i).{{ 'value' if commands_allowed else 'innerHTML' }} = minLevel[i];
                     document.getElementById('minLevel' + i).setAttribute("max", maxLevel[i]);
                     document.getElementById('minLevelLine' + i).setAttribute("y1", depth[i] - minLevel[i]);
                     document.getElementById('minLevelLine' + i).setAttribute("y2", depth[i] - minLevel[i]);
-                    document.getElementById('maxLevel' + i).{{ 'value' if login else 'innerHTML' }} = maxLevel[i];
+                    document.getElementById('maxLevel' + i).{{ 'value' if commands_allowed else 'innerHTML' }} = maxLevel[i];
                     document.getElementById('maxLevel' + i).setAttribute("min", minLevel[i]);
                     document.getElementById('maxLevelLine' + i).setAttribute("y1", depth[i] - maxLevel[i]);
                     document.getElementById('maxLevelLine' + i).setAttribute("y2", depth[i] - maxLevel[i]);
@@ -80,7 +80,7 @@ function getWsJSON() {
                 panic = stateJSON.panic;
             };
 
-            {% if login %}
+            {% if commands_allowed %}
             function setChanged() {
                 if (!change) {
                     change = true;
@@ -246,10 +246,10 @@ function getWsJSON() {
             </g>
         </svg>
         <!-- TODO
-        <div id="pumpLegend0">if ($login) echo '<input id="pumpInput0" type="checkbox" onchange="togglePump(0);" /> 'pomp <?=4*($id-1)+1?></div>
-        <div id="pumpLegend1">if ($login) echo '<input id="pumpInput1" type="checkbox" onchange="togglePump(1);" /> 'pomp <?=4*($id-1)+2?></div>
-        <div id="pumpLegend2">if ($login) echo '<input id="pumpInput2" type="checkbox" onchange="togglePump(2);" /> 'pomp <?=4*($id-1)+3?></div>
-        <div id="pumpLegend3">if ($login) echo '<input id="pumpInput3" type="checkbox" onchange="togglePump(3);" /> 'pomp <?=4*($id-1)+4?></div>
+        <div id="pumpLegend0">if ($commands_allowed) echo '<input id="pumpInput0" type="checkbox" onchange="togglePump(0);" /> 'pomp <?=4*($id-1)+1?></div>
+        <div id="pumpLegend1">if ($commands_allowed) echo '<input id="pumpInput1" type="checkbox" onchange="togglePump(1);" /> 'pomp <?=4*($id-1)+2?></div>
+        <div id="pumpLegend2">if ($commands_allowed) echo '<input id="pumpInput2" type="checkbox" onchange="togglePump(2);" /> 'pomp <?=4*($id-1)+3?></div>
+        <div id="pumpLegend3">if ($commands_allowed) echo '<input id="pumpInput3" type="checkbox" onchange="togglePump(3);" /> 'pomp <?=4*($id-1)+4?></div>
         -->
         <div style="position: relative; height: 50px">
         <div id="pumpLegend0"><input id="pumpInput0" type="checkbox" onchange="togglePump(0);" />pomp 1</div>
@@ -272,7 +272,7 @@ function getWsJSON() {
             <tr style="height:2em;">
                 <td>niveau {{id}}.1 (cm)</td>
                 <td id="curLevel0"></td>
-{% if login %}
+{% if commands_allowed %}
                 <td><input type="number" id="trgLevel0" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(0, this.value);" /></td>
                 <td><input type="number" id="minLevel0" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(0, this.value);" /></td>
                 <td><input type="number" id="maxLevel0" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(0, this.value);" /></td>
@@ -285,7 +285,7 @@ function getWsJSON() {
             <tr style="height:2em;">
                 <td>niveau {{id}}.2 (cm)</td>
                 <td id="curLevel1"></td>
-{% if login %}
+{% if commands_allowed %}
                 <td><input type="number" id="trgLevel1" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(1, this.value);" /></td>
                 <td><input type="number" id="minLevel1" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(1, this.value);" /></td>
                 <td><input type="number" id="maxLevel1" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(1, this.value);" /></td>
@@ -298,7 +298,7 @@ function getWsJSON() {
             <tr style="height:2em;">
                 <td>niveau {{ id }}.3 (cm)</td>
                 <td id="curLevel2"></td>
-{% if login %}
+{% if commands_allowed %}
                 <td><input type="number" id="trgLevel2" value="" min="0" max="" style="width:100px; margin-left:0px;" oninput="setTrgLevel(2, this.value);" /></td>
                 <td><input type="number" id="minLevel2" value="" style="width:100px; margin-left:0px;" oninput="setMinLevel(2, this.value);" /></td>
                 <td><input type="number" id="maxLevel2" value="" style="width:100px; margin-left:0px;" oninput="setMaxLevel(2, this.value);" /></td>
@@ -311,7 +311,7 @@ function getWsJSON() {
             <tr style="height:2em;">
                 <td>debiet uit {{ id }} (m³/u)</td>
                 <td id="curFlowOut"></td>
-{% if login %}
+{% if commands_allowed %}
                 <td><input type="number" id="trgFlow" value="" min="0" max="80" style="width:100px; margin-left:0px;" oninput="setTrgFlow(this.value);" /></td>
 {% else %}
                 <td id="trgFlow"></td>
