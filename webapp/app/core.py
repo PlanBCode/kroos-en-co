@@ -30,6 +30,11 @@ def process_uplink(status):
     app.logger.debug("Received status: %s", status)
     values = database.status_message_to_row(status)
     values['timestamp'] = datetime.now()
+
+    prev_status = batteries[status['battery']]['status']
+    if status['panic'] and prev_status and not prev_status['panic']:
+        app.logger.error("Panic mode enabled: {}".format(status))
+
     with app.app_context():
         db = app.get_db()
         database.insert_from_dict(db, 'status', values)
