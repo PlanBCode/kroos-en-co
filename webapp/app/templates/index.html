@@ -188,6 +188,9 @@
             var socket;
             $(function() {
                 socket = io();
+                socket.on('connect', function() {
+                    socket.emit('select_battery', {battery: {{ id|tojson }}});
+                });
                 socket.on('status', function(msg) {
                     $('#output').append(JSON.stringify(msg) + '\n');
                     // TODO: if ignoring msg because of change and

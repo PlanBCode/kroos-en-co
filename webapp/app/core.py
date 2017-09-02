@@ -31,18 +31,19 @@ def process_uplink(status):
     values = database.status_message_to_row(status)
     values['timestamp'] = datetime.now()
 
-    prev_status = batteries[status['battery']]['status']
+    battery = status['battery']
+    prev_status = batteries[battery]['status']
     if status['panic'] and prev_status and not prev_status['panic']:
         app.logger.error("Panic mode enabled: {}".format(status))
 
     with app.app_context():
         db = app.get_db()
         database.insert_from_dict(db, 'status', values)
-        batteries[status['battery']]['status'] = status
+        batteries[battery]['status'] = status
 
         # See if the status matches the current config, and if not resend
         # the config
-        config = batteries[status['battery']]['config']
+        config = batteries[battery]['config']
 
         if config:
             if not status_matches_config(status, config):
@@ -59,7 +60,7 @@ def process_uplink(status):
                     now = datetime.now()
                     database.update_from_dict(db, 'config', {'ackTimestamp': now})
                     config['ackTimestamp'] = now
-    websocket.send_status(status)
+    websocket.send_status(status, battery)
 
 def process_command(cmd):
     app.logger.info('Received command: %s', cmd)
