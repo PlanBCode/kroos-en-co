@@ -68,7 +68,8 @@ void onEvent (ev_t ev) {
             break;
         case EV_JOINED:
             Serial.println(F("EV_JOINED"));
-
+            // Set spreading factor to lowest value, allowing for regular status updates within the boundaries of TTN's fair use policy
+            LMIC_setDrTxpow(DR_SF7, 14);
             // Disable link check validation (automatically enabled
             // during join, but not supported by TTN at this time).
             LMIC_setLinkCheckMode(0);
@@ -161,6 +162,8 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     battery[downlinkBatId]->level[2]->setMaxLevel(buf[15]);
 
     battery[downlinkBatId]->panic = false;
+    for (size_t i=0;i<lengthof(battery[downlinkBatId]->flow);i++) battery[downlinkBatId]->flow[i]->enable();
+    for (size_t i=0;i<lengthof(battery[downlinkBatId]->level);i++) battery[downlinkBatId]->level[i]->enable();
 }
 
 void queueUplink() {
@@ -223,6 +226,11 @@ void setup() {
     battery[1]->attachFlowController(0, 5);
     battery[1]->attachFlowController(1, 8, 37);
 
+    for (size_t b=0; b<2; b++) {
+      for (size_t i=0;i<lengthof(battery[b]->flow);i++) battery[b]->flow[i]->disable();
+      for (size_t i=0;i<lengthof(battery[b]->level);i++) battery[b]->level[i]->disable();
+    }
+    
     uplinkBatId = 0;
 
     Serial.begin(9600);

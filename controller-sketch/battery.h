@@ -17,6 +17,7 @@ class FlowController {
 public:
   int pumpPin;
   uint8_t pumpState;
+  uint8_t enabled;
 
   int sensorPin;
   int lastSensorState;
@@ -33,15 +34,27 @@ public:
     this->sensorPin = sensorPin;
     this->pumpPin = pumpPin;
     pinMode(sensorPin, INPUT);
+    
     if (pumpPin!=-1) {
       digitalWrite(pumpPin, PUMP_OFF);
       pinMode(pumpPin, OUTPUT);
     }
+    enabled = false;
+    
     flowCounter = 0.0;
     targetFlow = 0.0;
     targetCount = 0;
   }
 
+  void enable() {
+    enabled = true;
+  }
+
+  void disable() {
+    enabled = false;
+    digitalWrite(pumpPin, PUMP_OFF);
+  }
+  
   double getCurrentFlow() {
     return currentFlow;
   }
@@ -60,9 +73,11 @@ public:
   }
 
   void setPumpState(bool state) {
-    printf("SetPumpState: %d\n", (int)state);
-    digitalWrite(pumpPin, !state);
-    pumpState = state ? 255 : 0;
+    if (enabled) {
+      printf("SetPumpState: %d\n", (int)state);
+      digitalWrite(pumpPin, !state);
+      pumpState = state ? 255 : 0;
+    }
   }
 
   bool doCycle(unsigned long prevDuration, bool manual) {
@@ -85,7 +100,7 @@ public:
           pumpState = 255;
         }
         targetCount = targetFlow * pulsesPerM3 / (3600000/CYCLE_INTERVAL);
-        digitalWrite(pumpPin, targetCount >= 1 ? PUMP_ON : PUMP_OFF);
+        setPumpState(targetCount >= 1 ? 1 : 0);
         printf("Flow pulses target*100: %d\n", (int)(targetCount*100));
       }
     }
@@ -106,7 +121,7 @@ public:
     if (!manual) {
       if (pumpPin != -1) {
         if (digitalRead(pumpPin) == PUMP_ON && targetCount >= flowCounter) {
-          digitalWrite(pumpPin, PUMP_OFF);
+          setPumpState(0);
           // Calculate how long the pump has been on
           pumpState = durationSoFar * 255 / CYCLE_INTERVAL;
           printf("Flow target reached, duty cycle was %d\n", pumpState);
@@ -131,6 +146,7 @@ public:
   int pumpPin;
   uint8_t pumpState;
   unsigned long pumpOnDuration;
+  uint8_t enabled;
 
   PID* pid;
   double pidOutput;
@@ -141,7 +157,8 @@ public:
     this->pumpPin = pumpPin;
 
     pinMode(pumpPin, OUTPUT);
-    digitalWrite(pumpPin, PUMP_OFF);
+    setPumpState(0);
+    enabled = false;
 
     pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, DIRECT);
     // The library expects ms, so divides this by 1000 so the Ki/Kd
@@ -159,6 +176,15 @@ public:
     maxLevel = 106; // Max sensor reading
   }
 
+  void enable() {
+    enabled = true;
+  }
+
+  void disable() {
+    enabled = false;
+    digitalWrite(pumpPin, PUMP_OFF);
+  }
+  
   double getCurrentLevel() {
     return currentLevel;
   }
@@ -197,9 +223,11 @@ public:
   }
 
   void setPumpState(bool state) {
-    printf("SetPumpState: %d\n", (int)state);
-    digitalWrite(pumpPin, !state);
-    pumpState = state ? 255 : 0;
+    if (enabled) {
+      printf("SetPumpState: %d\n", (int)state);
+      digitalWrite(pumpPin, state ? PUMP_ON : PUMP_OFF);
+      pumpState = state ? 255 : 0;
+    }
   }
   
   // return value true means panic
@@ -219,9 +247,9 @@ public:
       pumpOnDuration = CYCLE_INTERVAL*pidOutput;
       printf("PID says target: %d dc: %d%%, on: %ds\n", (int)targetLevel, (int)(pidOutput * 100), (int)(pumpOnDuration/1000));
       if (pumpOnDuration) {
-        digitalWrite(pumpPin, PUMP_ON);
+        setPumpState(1);
       } else {
-        digitalWrite(pumpPin, PUMP_OFF);
+        setPumpState(0);
       }
     }
     return false;
@@ -230,7 +258,7 @@ public:
   void doLoop(unsigned long durationSoFar, bool manual) {
     if (!manual) {
       if (durationSoFar > pumpOnDuration) {
-        digitalWrite(pumpPin, PUMP_OFF);
+        setPumpState(0);
       }
     }
   }
@@ -273,7 +301,10 @@ public:
     for (size_t i=0;i<lengthof(flow);i++) panic |= flow[i]->doCycle(prevDuration, manual);
     for (size_t i=0;i<lengthof(level);i++) panic |= level[i]->doCycle(prevDuration, manual);
     printf("Manualtimeout: %lu panic: %d\n", manualTimeout, (int)panic);
-    // TODO: Act on panic?
+    if (panic) {
+      for (size_t i=0;i<lengthof(flow);i++) flow[i]->disable();
+      for (size_t i=0;i<lengthof(level);i++) level[i]->disable();
+    }
     return panic;
   }
 
