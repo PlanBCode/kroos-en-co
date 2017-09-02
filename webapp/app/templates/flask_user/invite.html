@@ -1,0 +1,17 @@
+{% extends 'flask_user/member_base.html' %}
+
+{% block content %}
+{% from "flask_user/_macros.html" import render_field, render_submit_field %}
+<h1>{%trans%}Gebruiker uitnodigen{%endtrans%}</h1>
+Vul hier een e-mailadres in om een andere gebruiker uit te nodigen. Er wordt een e-mail gestuurd met een link om een account aan te maken.
+
+Let op: na het aanmaken van een account heeft deze gebruiker volledige toegang tot het systeem.
+
+<form action="" method="POST" class="form" role="form">
+    {{ form.hidden_tag() }}
+    {{ render_field(form.email, tabindex=10) }}
+    {{ render_submit_field(form.submit, tabindex=90) }}
+</form>
+
+{% endblock %}
+
