@@ -23,7 +23,7 @@ def handle_select_battery(msg):
     join_room(battery)
 
 @app.socketio.on('command')
-def handle_message(cmd):
+def handle_command(cmd):
     if not flask_user.access.is_authenticated():
         reply_message("Command failed, you must be logged in")
     else:
