@@ -1,4 +1,5 @@
 from flask_socketio import SocketIO, send, emit
+import flask_user
 
 from . import core, app
 
@@ -11,7 +12,10 @@ def handle_error(e):
 
 @app.socketio.on('command')
 def handle_message(cmd):
-    core.process_command(cmd)
+    if not flask_user.access.is_authenticated():
+        reply_message("Command failed, you must be logged in")
+    else:
+        core.process_command(cmd)
 
 def reply_message(message):
     send(message)
