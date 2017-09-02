@@ -10,7 +10,7 @@ function getWsJSON() {
 }
             var change = false;
             var mode;
-            
+
             var manualTimeout;
             var pump = [];
             var curFlowIn;
@@ -25,14 +25,14 @@ function getWsJSON() {
             var depth = [100, 150, 200];
             var maxDepth = 0;
             for (var i=0;i<3;i++) maxDepth = Math.max(maxDepth, depth[i]);
-            
+
             function updateInterface(stateJSON) {
                 // update manual override indicators
                 manualTimeout = stateJSON.manualTimeout;
                 mode = manualTimeout ? 'manual' : 'automatic';
                 document.getElementById('manual').style.visibility = mode=='manual' ? 'visible' : 'hidden';
                 document.getElementById('manualTimeout').value = manualTimeout;
-                
+
                 // update pump indicators
                 pump = stateJSON.pump;
                 for (var i=0;i<4;i++) {
@@ -41,7 +41,7 @@ function getWsJSON() {
                     {% endif %}
                     document.getElementById('pumpSymbol'+i).style.fill = pump[i] ? 'lime' : 'red';
                 }
-                
+
                 // update flow indicators
                 curFlowIn = stateJSON.currentFlow[0];
                 curFlowOut = stateJSON.currentFlow[1];
@@ -53,7 +53,7 @@ function getWsJSON() {
                 {% else %}
                 document.getElementById('trgFlow').innerHTML = trgFlow;
                 {% endif %}
-                
+
                 // update level indicators
                 curLevel = stateJSON.currentLevel;
                 trgLevel = stateJSON.targetLevel;
@@ -75,11 +75,11 @@ function getWsJSON() {
                     document.getElementById('maxLevelLine' + i).setAttribute("y1", depth[i] - maxLevel[i]);
                     document.getElementById('maxLevelLine' + i).setAttribute("y2", depth[i] - maxLevel[i]);
                 }
-                
+
                 if (stateJSON.panic && !panic) alert('panic');
                 panic = stateJSON.panic;
             };
-            
+
             {% if login %}
             function setChanged() {
                 if (!change) {
@@ -87,7 +87,7 @@ function getWsJSON() {
                     document.getElementById('save').style.visibility = 'visible';
                 }
             }
-            
+
             function saveSettings() {
                 var cmdJSON = {
                     "battery": "{{id}}",
@@ -104,19 +104,19 @@ function getWsJSON() {
                 document.getElementById('save').style.visibility = 'hidden';
                 change = false;
             }
-            
+
             function setTrgFlow(value) {
                 trgFlow = parseInt(value);
                 setChanged();
             }
-            
+
             function setTrgLevel(i, value) {
                 trgLevel[i] = parseInt(value);
                 document.getElementById('trgLevelLine' + i).setAttribute("y1", depth[i] - value);
                 document.getElementById('trgLevelLine' + i).setAttribute("y2", depth[i] - value);
                 setChanged();
             }
-            
+
             function setMinLevel(i, value) {
                 minLevel[i] = parseInt(value);
                 document.getElementById('minLevelLine' + i).setAttribute("y1", depth[i] - value);
@@ -131,7 +131,7 @@ function getWsJSON() {
                 document.getElementById('maxLevel' + i).setAttribute("min", value);
                 setChanged();
             }
-            
+
             function setMaxLevel(i, value) {
                 maxLevel[i] = parseInt(value);
                 document.getElementById('maxLevelLine' + i).setAttribute("y1", depth[i] - value);
@@ -146,7 +146,7 @@ function getWsJSON() {
                 document.getElementById('minLevel' + i).setAttribute("max", value);
                 setChanged();
             }
-            
+
             function togglePump(i) {
                 if (mode=='manual' || confirm('Wil je de pompen handmatig instellen?')) {
                     pump[i] = !pump[i];
@@ -160,13 +160,13 @@ function getWsJSON() {
                     document.getElementById('pumpInput' + i).checked = pump[i];
                 }
             }
-            
+
             function setManualTimeout(value) {
                 manualTimeout = parseInt(value);
                 setChanged();
             }
             {% endif %}
-            
+
             function init() {
                 for (var i=0;i<3;i++) document.getElementById('bassin'+i).setAttribute("y", depth[i]);
                 document.getElementById('floor').setAttribute('d', 'M 0,0 l 0,100 100,0 0,-100, 50,0 0,' + depth[0] + ' 400,0 0,-' + depth[0] + ' 50,0 0,' + depth[1] + ' 400,0 0,-' + depth[1] + ' 50,0 0,' + depth[2] + ' 400,0 0,-' + depth[2] + ' 50,0 0,100 100,0 0,-100');
@@ -175,7 +175,7 @@ function getWsJSON() {
                 document.getElementById('pipe1').setAttribute('d', 'M 530,' + depth[0] + ' 530,' + (maxDepth+20) + ' 620,' + (maxDepth+20) + ' 620,' + depth[1] + ' 630,' + depth[1] + ' 630,' + (maxDepth+30) + ' 520,' + (maxDepth+30) + ' 520,' + depth[0] + '');
                 document.getElementById('pipe2').setAttribute('d', 'M 980,' + depth[1] + ' 980,' + (maxDepth+20) + ' 1070,' + (maxDepth+20) + ' 1070,' + depth[2] + ' 1080,' + depth[2] + ' 1080,' + (maxDepth+30) + ' 970,' + (maxDepth+30) + ' 970,' + depth[1] + '');
                 document.getElementById('pipe3').setAttribute('d', 'M 1430,' + depth[2] + ' 1430,' + (maxDepth+20) + ' 1520,' + (maxDepth+20) + ' 1520,100 1530,100 1530,' + (maxDepth+30) + ' 1420,' + (maxDepth+30) + ' 1420,' + depth[2] + '');
-                
+
                 document.getElementById('save').style.visibility = 'hidden';
                 document.getElementById('manual').style.visibility = 'hidden';
                 change = false;
