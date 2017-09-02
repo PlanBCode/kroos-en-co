@@ -26,6 +26,9 @@ def status_matches_config(status, config):
     # TODO manualTimeout
     return ok
 
+def status_for_battery(battery):
+    return batteries[battery]['status']
+
 def process_uplink(status):
     app.logger.debug("Received status: %s", status)
     values = database.status_message_to_row(status)

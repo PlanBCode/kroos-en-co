@@ -14,7 +14,12 @@ def handle_error(e):
 def handle_select_battery(msg):
     battery = msg['battery']
     app.logger.debug("Selected battery: %s", battery)
-    # Subscribe to all future status updates for this battery
+    status = core.status_for_battery(battery)
+    # Send the most recent status, if any
+    if status:
+        app.logger.debug("Sending initial status: %s", str(status))
+        emit('status', status)
+    # And subscribe to all future status updates for this battery
     join_room(battery)
 
 @app.socketio.on('command')
