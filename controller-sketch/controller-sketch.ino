@@ -141,10 +141,10 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     uint16_t timeout = (buf[0] << 8) | buf[1];
     battery[downlinkBatId]->setManualTimeout(timeout);
     if (timeout > 0) {
-      battery[downlinkBatId]->level[0]->setPumpState(buf[2]);
-      battery[downlinkBatId]->level[1]->setPumpState(buf[3]);
-      battery[downlinkBatId]->level[2]->setPumpState(buf[4]);
-      battery[downlinkBatId]->flow[1]->setPumpState(buf[5]);
+      battery[downlinkBatId]->level[0]->setPumpDutyCycle(buf[2]);
+      battery[downlinkBatId]->level[1]->setPumpDutyCycle(buf[3]);
+      battery[downlinkBatId]->level[2]->setPumpDutyCycle(buf[4]);
+      battery[downlinkBatId]->flow[1]->setPumpDutyCycle(buf[5]);
     }
 
     battery[downlinkBatId]->flow[1]->setTargetFlow(buf[6]);
@@ -177,10 +177,10 @@ void queueUplink() {
     buf[1]  = timeout;
 
     // Pump state in 255ths
-    buf[2]  = battery[uplinkBatId]->level[0]->getPumpState();
-    buf[3]  = battery[uplinkBatId]->level[1]->getPumpState();
-    buf[4]  = battery[uplinkBatId]->level[2]->getPumpState();
-    buf[5]  = battery[uplinkBatId]->flow[1]->getPumpState();
+    buf[2]  = battery[uplinkBatId]->level[0]->prevPumpDutyCycle;
+    buf[3]  = battery[uplinkBatId]->level[1]->prevPumpDutyCycle;
+    buf[4]  = battery[uplinkBatId]->level[2]->prevPumpDutyCycle;
+    buf[5]  = battery[uplinkBatId]->flow[1]->prevPumpDutyCycle;
 
     // Flow is in M²/hour
     buf[6]  = battery[uplinkBatId]->flow[0]->getCurrentFlow();

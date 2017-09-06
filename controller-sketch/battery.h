@@ -13,37 +13,19 @@
 //const unsigned long CYCLE_INTERVAL = 5 * 60000UL;
 const unsigned long CYCLE_INTERVAL = 10000UL;
 
-class FlowController {
+class PumpController {
 public:
   int pumpPin;
-  uint8_t pumpState;
   uint8_t enabled;
+  uint8_t pumpDutyCycle;
+  unsigned long pumpOnDuration;
 
-  int sensorPin;
-  int lastSensorState;
-  unsigned int flowCounter;
-  const double pulsesPerM3 = 200.0;
-  double currentFlow;
-  double targetFlow;
-  uint32_t targetCount;
-
-  unsigned long lastPulseStart;
-
-  // pumpPin -1 means no pump is connected, only measure flow
-  FlowController(int sensorPin, int pumpPin = -1) {
-    this->sensorPin = sensorPin;
-    this->pumpPin = pumpPin;
-    pinMode(sensorPin, INPUT);
-    
+  PumpController(int pumpPin) {
     if (pumpPin!=-1) {
       digitalWrite(pumpPin, PUMP_OFF);
       pinMode(pumpPin, OUTPUT);
     }
     enabled = false;
-    
-    flowCounter = 0.0;
-    targetFlow = 0.0;
-    targetCount = 0;
   }
 
   void enable() {
@@ -54,7 +36,67 @@ public:
     enabled = false;
     digitalWrite(pumpPin, PUMP_OFF);
   }
-  
+
+  double getPumpDutyCycle() {
+    return pumpDutyCycle;
+  }
+
+  void setPumpDutyCycle(uint8_t dc) {
+    pumpDutyCycle = dc;
+    pumpOnDuration = CYCLE_INTERVAL*dc/255;
+    if (dc)
+      setPumpState(true);
+  }
+
+  bool getPumpState() {
+    return digitalRead(pumpPin) == PUMP_ON;
+  }
+
+  void setPumpState(bool state) {
+    if (enabled || !state) {
+      printf("SetPumpState: %d\n", (int)state);
+      digitalWrite(pumpPin, state ? PUMP_ON : PUMP_OFF);
+    }
+  }
+
+  bool doCycle(unsigned long /* prevDuration */, bool manual) {
+    // Enable the pumps at the start of the cycle if required
+    if (manual && pumpDutyCycle)
+      setPumpState(true);
+  }
+
+  void doLoop(unsigned long durationSoFar, bool /* manual */) {
+    if (durationSoFar > pumpOnDuration && getPumpState()) {
+      setPumpState(false);
+    }
+  }
+};
+
+class FlowController : public PumpController {
+public:
+  int sensorPin;
+  int lastSensorState;
+  unsigned int flowCounter;
+  const double pulsesPerM3 = 200.0;
+  double currentFlow;
+  double targetFlow;
+  uint32_t targetCount;
+  uint8_t prevPumpDutyCycle;
+
+  unsigned long lastPulseStart;
+
+  // pumpPin -1 means no pump is connected, only measure flow
+  FlowController(int sensorPin, int pumpPin = -1)
+  : PumpController(pumpPin) {
+    this->sensorPin = sensorPin;
+    this->pumpPin = pumpPin;
+    pinMode(sensorPin, INPUT);
+
+    flowCounter = 0.0;
+    targetFlow = 0.0;
+    targetCount = 0;
+  }
+
   double getCurrentFlow() {
     return currentFlow;
   }
@@ -68,19 +110,8 @@ public:
     return targetFlow;
   }
 
-  double getPumpState() {
-    return pumpState;
-  }
-
-  void setPumpState(bool state) {
-    if (enabled) {
-      printf("SetPumpState: %d\n", (int)state);
-      digitalWrite(pumpPin, !state);
-      pumpState = state ? 255 : 0;
-    }
-  }
-
   bool doCycle(unsigned long prevDuration, bool manual) {
+    PumpController::doCycle(prevDuration, manual);
     currentFlow = (flowCounter / pulsesPerM3) * (3600000/prevDuration);
     Serial.print("3600000/prevDuration: ");
     Serial.println(3600000/prevDuration);
@@ -94,20 +125,24 @@ public:
     if (!manual) {
       if (pumpPin != -1) {
         // If we haven't reached the target by the end of the cycle,
-        // doLoop won't have set pumpState
+        // doLoop won't have set prevPumpDutyCycle
         if (digitalRead(pumpPin) == PUMP_ON) {
           printf("Did not reach flow target\n");
-          pumpState = 255;
+          prevPumpDutyCycle = 255;
         }
         targetCount = targetFlow * pulsesPerM3 / (3600000/CYCLE_INTERVAL);
-        setPumpState(targetCount >= 1 ? 1 : 0);
+        setPumpDutyCycle(targetCount >= 1 ? 255 : 0);
         printf("Flow pulses target*100: %d\n", (int)(targetCount*100));
       }
+    } else {
+      prevPumpDutyCycle = pumpDutyCycle;
     }
     return false;
   }
 
   void doLoop(unsigned long durationSoFar, bool manual) {
+    PumpController::doLoop(durationSoFar, manual);
+
     int sensorState = digitalRead(sensorPin);
     if (sensorState != lastSensorState) {
       if (sensorState == HIGH) lastPulseStart = millis();
@@ -120,18 +155,18 @@ public:
 
     if (!manual) {
       if (pumpPin != -1) {
-        if (digitalRead(pumpPin) == PUMP_ON && targetCount >= flowCounter) {
+        if (getPumpState() && targetCount >= flowCounter) {
           setPumpState(0);
           // Calculate how long the pump has been on
-          pumpState = durationSoFar * 255 / CYCLE_INTERVAL;
-          printf("Flow target reached, duty cycle was %d\n", pumpState);
+          prevPumpDutyCycle = durationSoFar * 255 / CYCLE_INTERVAL;
+          printf("Flow target reached, duty cycle was %d\n", prevPumpDutyCycle);
         }
       }
     }
   }
 };
 
-class LevelController {
+class LevelController : public PumpController {
 public:
   int sensorPin;
   // 5000mV, 1023 steps, 100Ohm, 0.15mA/cm
@@ -143,16 +178,14 @@ public:
   double minLevel;
   double maxLevel;
 
-  int pumpPin;
-  uint8_t pumpState;
-  unsigned long pumpOnDuration;
-  uint8_t enabled;
+  uint8_t prevPumpDutyCycle;
 
   PID* pid;
   double pidOutput;
   const double Kp=10, Ki=0.001, Kd=0;
 
-  LevelController(int sensorPin, int pumpPin) {
+  LevelController(int sensorPin, int pumpPin)
+  : PumpController(pumpPin) {
     this->sensorPin = sensorPin;
     this->pumpPin = pumpPin;
 
@@ -216,22 +249,10 @@ public:
     return maxLevel;
   }
 
-  /* Return the pump duty cycle over the previous cycle (when called
-   * directly after doCycle()). */
-  uint8_t getPumpState() {
-    return pumpState;
-  }
-
-  void setPumpState(bool state) {
-    if (enabled) {
-      printf("SetPumpState: %d\n", (int)state);
-      digitalWrite(pumpPin, state ? PUMP_ON : PUMP_OFF);
-      pumpState = state ? 255 : 0;
-    }
-  }
-  
   // return value true means panic
-  bool doCycle(unsigned long /* duration */, bool manual) {
+  bool doCycle(unsigned long prevDuration, bool manual) {
+    PumpController::doCycle(prevDuration, manual);
+
     uint16_t read = analogRead(sensorPin);
     currentLevel = a*read + b;
     printf("Level adc: %u, mm: %d\n", read, (int)(currentLevel * 10));
@@ -240,27 +261,15 @@ public:
     }
     else if (!manual) {
       // Store pumpstate over *previous* cycle
-      pumpState = pidOutput * 255;
-      printf("Previous pump duty cycle %d\n", pumpState);
+      prevPumpDutyCycle = pumpDutyCycle;
       // Calculate pump time for next cycle
       pid->Compute();
-      pumpOnDuration = CYCLE_INTERVAL*pidOutput;
-      printf("PID says target: %d dc: %d%%, on: %ds\n", (int)targetLevel, (int)(pidOutput * 100), (int)(pumpOnDuration/1000));
-      if (pumpOnDuration) {
-        setPumpState(1);
-      } else {
-        setPumpState(0);
-      }
+      setPumpDutyCycle(pidOutput * 255);
+      printf("PID says target: %d dc: %d\n", (int)targetLevel, (int)(pumpDutyCycle));
+    } else {
+      prevPumpDutyCycle = pumpDutyCycle;
     }
     return false;
-  }
-
-  void doLoop(unsigned long durationSoFar, bool manual) {
-    if (!manual) {
-      if (durationSoFar > pumpOnDuration) {
-        setPumpState(0);
-      }
-    }
   }
 };
 
