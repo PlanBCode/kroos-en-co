@@ -1,5 +1,6 @@
 from flask import g
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 from . import app
 
@@ -34,9 +35,11 @@ def get_mysql_db():
 if 'MYSQL_DB' in app.config:
         app.get_db = get_mysql_db
         placeholder = '%s'
+        datetime_fmt = '%Y-%m-%d %H:%M:%S'
 else:
         app.get_db = get_sqlite_db
         placeholder = '?'
+        datetime_fmt = '%Y-%m-%d %H:%M:%S.%f'
 
 @app.teardown_appcontext
 def close_db(error):
@@ -81,8 +84,13 @@ def config_message_to_row(msg):
     }
 
 def config_row_to_message(row):
+    if isinstance(row['timestamp'], datetime):
+        timestamp = row['timestamp']
+    else:
+        timestamp = datetime.strptime(row['timestamp'], datetime_fmt)
+
     return {
-      'timestamp': row['timestamp'],
+      'timestamp': timestamp,
       'ackTimestamp': row['ackTimestamp'],
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
