@@ -272,7 +272,7 @@ public:
       // Calculate pump time for next cycle
       pid->Compute();
       setPumpDutyCycle(pidOutput * 255);
-      printf("PID says target: %d dc: %d\n", (int)targetLevel, (int)(pumpDutyCycle));
+      printf("PID says current: %d, target: %d dc: %d\n", (int)currentLevel, (int)targetLevel, (int)(pumpDutyCycle));
     } else {
       prevPumpDutyCycle = pumpDutyCycle;
     }
