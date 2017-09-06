@@ -48,20 +48,25 @@
 				
 {% if commands_allowed %}
 				// check difference between currentStat, lastStat and interface
-				conflict = '';
-                if (mode=='manual' && !currentStat.manualTimeout) conflict+= 'Het regelwerk is overgeschakeld naar automatische modus omdat de timeout is verlopen of omdat iemand anders de handbediening heeft uitgeschakeld.<br/>';
-                
-                newConf = false;
-                if (document.getElementById('trgFlow').value!=currentStat.targetFlow) newConf = true;
-                for (var i=0;i<3;i++) if (document.getElementById('trgLevel' + i).value!=targetLevel[i]) newConf = true;
-                if (newConf) {
-					conflict+= 'Eén of meerdere configuratie-instellingen zijn veranderd:<br/>';
-					conflict+= 'debiet: nu ' + currentStat.targetFlow + ', was ' + lastStat.targetFlow + ', doel ' + document.getElementById('trgFlow').value + 'm³/u';
-					for (var i=0;i<3;i++) conflict+= 'niveau ' + i + ': nu ' + currentStat.targetLevel[i] + ', was ' + lastStat.targetLevel[i] + ', doel ' + document.getElementById('trgLevel' + i).value + 'cm';
-				}
-                
-                if (conflict) {
-					if(confirm('Wil je de nieuwe instellingen overnemen?')) {
+
+                skipConf = false;
+                if (lastStat /* TODO: && lastStat != currentStat */) {
+                    if (mode=='manual' && !currentStat.manualTimeout) conflict+= 'Het regelwerk is overgeschakeld naar automatische modus omdat de timeout is verlopen of omdat iemand anders de handbediening heeft uitgeschakeld.<br/>';
+
+                    newConf = false;
+                    conflict = '';
+                    if (document.getElementById('trgFlow').value!=currentStat.targetFlow) newConf = true;
+                    for (var i=0;i<3;i++) if (document.getElementById('trgLevel' + i).value!=trgLevel[i]) newConf = true;
+                    if (newConf) {
+                        conflict+= 'Eén of meerdere configuratie-instellingen zijn veranderd:<br/>';
+                        conflict+= 'debiet: nu ' + currentStat.targetFlow + ', was ' + lastStat.targetFlow + ', doel ' + document.getElementById('trgFlow').value + 'm³/u';
+                        for (var i=0;i<3;i++) conflict+= 'niveau ' + i + ': nu ' + currentStat.targetLevel[i] + ', was ' + lastStat.targetLevel[i] + ', doel ' + document.getElementById('trgLevel' + i).value + 'cm';
+                    }
+                    if (conflict)
+                        skipConf = !confirm('Wil je de nieuwe instellingen overnemen?');
+                }
+
+                if (!skipConf) {
 						// update manual override indicators
 						manualTimeout = currentStat.manualTimeout;
 						mode = manualTimeout ? 'manual' : 'automatic';
@@ -104,7 +109,6 @@
 							document.getElementById('maxLevelLine' + i).setAttribute("y1", depth[i] - maxLevel[i]);
 							document.getElementById('maxLevelLine' + i).setAttribute("y2", depth[i] - maxLevel[i]);
 						}
-					}
 				}
 
 {% else %}
