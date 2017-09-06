@@ -147,6 +147,7 @@
 				for (var i=0;i<4;i++) document.getElementById('pump' + i + 'input').style.display = 'inline-block';
 				document.getElementById('manual').style.visibility = mode=='manual' ? 'visible' : 'hidden';
 				document.getElementById('manualTimeout').value = 60;
+                                manualTimeout = 60;
 				setChanged();
 			}
 			function setAutomatic() {
