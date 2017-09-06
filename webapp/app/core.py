@@ -26,10 +26,22 @@ def update_timeout(config):
     return max(0, int(config['manualTimeout'] - timeElapsed))
 
 def status_matches_config(status, config):
-    # TODO: Match pump 255 vs 1
-    fields = ['pump', 'targetFlow', 'targetLevel', 'minLevel', 'maxLevel']
+    expectedTimeout = update_timeout(config)
+    app.logger.debug("Timeout expected: %s, received %s. Original timeout: %s", expectedTimeout, status['manualTimeout'], config['manualTimeout'])
+    margin = 2 # minutes
+    if (status['manualTimeout'] < expectedTimeout - margin
+            or status['manualTimeout'] > expectedTimeout + margin):
+        return False
+
+    fields = ['targetFlow', 'targetLevel', 'minLevel', 'maxLevel']
+
+    # Only check pump state when in manual mode
+    if status['manualTimeout']:
+        fields.append('pump')
+
+    # Check the relevant fields for equality
     ok = all(status[f] == config[f] for f in fields)
-    # TODO manualTimeout
+
     return ok
 
 def status_for_battery(battery):
