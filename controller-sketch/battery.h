@@ -10,8 +10,8 @@
 #error "printfs need LMIC_PRINTF_TO, or they will crash"
 #endif
 
-//const unsigned long CYCLE_INTERVAL = 5 * 60000UL;
-const unsigned long CYCLE_INTERVAL = 10000UL;
+const unsigned long CYCLE_INTERVAL = 5 * 60000UL;
+//const unsigned long CYCLE_INTERVAL = 10000UL;
 
 class PumpController {
 public:
