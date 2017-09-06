@@ -200,20 +200,20 @@ public:
     setPumpState(0);
     enabled = false;
 
+    pidOutput = 0.0;
+    targetLevel = 0;
+    currentLevel = 0;
+    minLevel = 0;
+    maxLevel = 106; // Max sensor reading
+
     pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, REVERSE);
     // The library expects ms, so divides this by 1000 so the Ki/Kd
     // values are per second. However, 5 minutes in ms overflows an int,
     // so scale by 60 here. The Ki/Kd values become per minute from
     // this.
     pid->SetSampleTime(CYCLE_INTERVAL / 60);
-    pid->SetMode(AUTOMATIC);
     pid->SetOutputLimits(0, 1);
-
-    pidOutput = 0.0;
-    targetLevel = 0;
-    currentLevel = 0;
-    minLevel = 0;
-    maxLevel = 106; // Max sensor reading
+    pid->SetMode(AUTOMATIC);
   }
 
   void enable() {
