@@ -6,8 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Krooscockpit</title>
 
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/jquery-1.11.0.min.js') }}"></script>
+
     <!-- Bootstrap -->
-    <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <link rel=stylesheet type=text/css href="{{ url_for('static', filename='libs/bootstrap-3.1.1.min.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='libs/bootstrap-3.1.1.min.js') }}"></script>
 
     <!-- In-lining styles to avoid needing a separate .css file -->
     <style>
@@ -72,11 +76,5 @@
         <div class="pull-left">Krooscockpit</div>
     </div>
     {% endblock %}
-
-
-    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-    <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
-    <!-- Bootstrap -->
-    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
   </body>
 </html>
