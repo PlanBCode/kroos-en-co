@@ -42,6 +42,10 @@ public:
   }
 
   void setPumpDutyCycle(uint8_t dc) {
+    if (pumpPin == -1)
+      return;
+
+    printf("SetPumpDutyCycle: %d\n", (int)dc);
     pumpDutyCycle = dc;
     pumpOnDuration = CYCLE_INTERVAL*dc/255;
     if (dc)
@@ -49,11 +53,14 @@ public:
   }
 
   bool getPumpState() {
+    if (pumpPin == -1)
+      return false;
+
     return digitalRead(pumpPin) == PUMP_ON;
   }
 
   void setPumpState(bool state) {
-    if (enabled || !state) {
+    if (pumpPin != -1 && (enabled || !state)) {
       printf("SetPumpState: %d\n", (int)state);
       digitalWrite(pumpPin, state ? PUMP_ON : PUMP_OFF);
     }
@@ -61,12 +68,12 @@ public:
 
   bool doCycle(unsigned long /* prevDuration */, bool manual) {
     // Enable the pumps at the start of the cycle if required
-    if (manual && pumpDutyCycle)
+    if (pumpPin != -1 && manual && pumpDutyCycle)
       setPumpState(true);
   }
 
   void doLoop(unsigned long durationSoFar, bool /* manual */) {
-    if (pumpDutyCycle < 255 && durationSoFar > pumpOnDuration && getPumpState()) {
+    if (pumpPin != -1 && pumpDutyCycle < 255 && durationSoFar > pumpOnDuration && getPumpState()) {
       setPumpState(false);
     }
   }
