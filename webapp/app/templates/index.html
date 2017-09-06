@@ -231,7 +231,7 @@
             }
 
             function setPump(i, value) {
-                pump[i] = value;
+                pump[i] = parseInt(value);
 				document.getElementById('pump' + i + 'value').innerHTML = Math.round(100*pump[i]/255.0);
                 setChanged();
             }
