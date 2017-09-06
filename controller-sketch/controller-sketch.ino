@@ -253,7 +253,11 @@ void loop() {
     os_runloop_once();
     unsigned long now = millis();
     if (lastCycleTime == 0 || now - lastCycleTime > CYCLE_INTERVAL) {
-        for(size_t i=0;i<lengthof(battery);i++) battery[i]->doCycle(now - lastCycleTime);
+        for(size_t i=0;i<lengthof(battery);i++) {
+            printf("***** Battery %d *****\n", i+1);
+            battery[i]->doCycle(now - lastCycleTime);
+        }
+        printf("**********\n");
         queueUplink();
         lastCycleTime = now;
     }
