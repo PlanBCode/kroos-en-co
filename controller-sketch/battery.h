@@ -189,7 +189,7 @@ public:
 
   PID* pid;
   double pidOutput;
-  const double Kp=10, Ki=0.001, Kd=0;
+  const double Kp=0.04, Ki=0.001, Kd=0;
 
   LevelController(int sensorPin, int pumpPin)
   : PumpController(pumpPin) {
