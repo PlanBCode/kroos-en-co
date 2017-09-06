@@ -141,13 +141,13 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     uint16_t timeout = (buf[0] << 8) | buf[1];
     battery[downlinkBatId]->setManualTimeout(timeout);
     if (timeout > 0) {
-      battery[downlinkBatId]->level[0]->setPumpDutyCycle(buf[2]);
-      battery[downlinkBatId]->level[1]->setPumpDutyCycle(buf[3]);
-      battery[downlinkBatId]->level[2]->setPumpDutyCycle(buf[4]);
-      battery[downlinkBatId]->flow[1]->setPumpDutyCycle(buf[5]);
+      battery[downlinkBatId]->flow[0]->setPumpDutyCycle(buf[2]);
+      battery[downlinkBatId]->level[0]->setPumpDutyCycle(buf[3]);
+      battery[downlinkBatId]->level[1]->setPumpDutyCycle(buf[4]);
+      battery[downlinkBatId]->level[2]->setPumpDutyCycle(buf[5]);
     }
 
-    battery[downlinkBatId]->flow[1]->setTargetFlow(buf[6]);
+    battery[downlinkBatId]->flow[0]->setTargetFlow(buf[6]);
 
     battery[downlinkBatId]->level[0]->setTargetLevel(buf[7]);
     battery[downlinkBatId]->level[1]->setTargetLevel(buf[8]);
@@ -177,15 +177,15 @@ void queueUplink() {
     buf[1]  = timeout;
 
     // Pump state in 255ths
-    buf[2]  = battery[uplinkBatId]->level[0]->prevPumpDutyCycle;
-    buf[3]  = battery[uplinkBatId]->level[1]->prevPumpDutyCycle;
-    buf[4]  = battery[uplinkBatId]->level[2]->prevPumpDutyCycle;
-    buf[5]  = battery[uplinkBatId]->flow[1]->prevPumpDutyCycle;
+    buf[2]  = battery[uplinkBatId]->flow[0]->prevPumpDutyCycle;
+    buf[3]  = battery[uplinkBatId]->level[0]->prevPumpDutyCycle;
+    buf[4]  = battery[uplinkBatId]->level[1]->prevPumpDutyCycle;
+    buf[5]  = battery[uplinkBatId]->level[2]->prevPumpDutyCycle;
 
     // Flow is in M²/hour
     buf[6]  = battery[uplinkBatId]->flow[0]->getCurrentFlow();
     buf[7]  = battery[uplinkBatId]->flow[1]->getCurrentFlow();
-    buf[8]  = battery[uplinkBatId]->flow[1]->getTargetFlow();
+    buf[8]  = battery[uplinkBatId]->flow[0]->getTargetFlow();
 
     // Levels are in cm
     buf[9]  = battery[uplinkBatId]->level[0]->getCurrentLevel();
@@ -213,18 +213,18 @@ void queueUplink() {
 
 void setup() {
     battery[0] = new Battery();
-    battery[0]->attachLevelController(0, A0, 23);
-    battery[0]->attachLevelController(1, A1, 25);
-    battery[0]->attachLevelController(2, A2, 27);
-    battery[0]->attachFlowController(0, 3);
-    battery[0]->attachFlowController(1, 4, 29);
+    battery[0]->attachFlowController(0, 3, 23);
+    battery[0]->attachLevelController(0, A0, 25);
+    battery[0]->attachLevelController(1, A1, 27);
+    battery[0]->attachLevelController(2, A2, 29);
+    battery[0]->attachFlowController(1, 4);
 
     battery[1] = new Battery();
-    battery[1]->attachLevelController(0, A3, 31);
-    battery[1]->attachLevelController(1, A4, 33);
-    battery[1]->attachLevelController(2, A5, 35);
-    battery[1]->attachFlowController(0, 5);
-    battery[1]->attachFlowController(1, 8, 37);
+    battery[1]->attachFlowController(0, 5, 31);
+    battery[1]->attachLevelController(0, A3, 33);
+    battery[1]->attachLevelController(1, A4, 35);
+    battery[1]->attachLevelController(2, A5, 37);
+    battery[1]->attachFlowController(1, 8);
 
     for (size_t b=0; b<2; b++) {
       for (size_t i=0;i<lengthof(battery[b]->flow);i++) battery[b]->flow[i]->disable();

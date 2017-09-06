@@ -200,7 +200,7 @@ public:
     setPumpState(0);
     enabled = false;
 
-    pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, DIRECT);
+    pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, REVERSE);
     // The library expects ms, so divides this by 1000 so the Ki/Kd
     // values are per second. However, 5 minutes in ms overflows an int,
     // so scale by 60 here. The Ki/Kd values become per minute from
