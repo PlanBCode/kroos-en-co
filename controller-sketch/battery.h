@@ -162,7 +162,7 @@ public:
 
     if (!manual) {
       if (pumpPin != -1) {
-        if (getPumpState() && targetCount >= flowCounter) {
+        if (getPumpState() && flowCounter >= targetCount) {
           setPumpState(0);
           // Calculate how long the pump has been on
           prevPumpDutyCycle = durationSoFar * 255 / CYCLE_INTERVAL;
