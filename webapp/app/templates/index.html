@@ -38,6 +38,9 @@
                     document.getElementById('bassin' + i).setAttribute("y", depth[i] - curLevel[i]);
                     document.getElementById('bassin' + i).setAttribute("height", curLevel[i]);
 				}
+                for (var i=0;i<4;i++) {
+                    document.getElementById('pump' + i + 'value').innerHTML = Math.round(100*currentStat.pump[i]/255.0);
+                }
 				
 				if (currentStat.panic && !panic) alert('Er is een storing in het systeem, alle pompen worden uitgeschakeld.');
 				panic = currentStat.panic;
