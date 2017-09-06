@@ -7,7 +7,8 @@ from . import core, app
 def index():
     context = {
         'commands_allowed': flask_user.access.is_authenticated(),
-        'id': 'lankheet-2',
+        'id': flask.request.args.get('id'),
+        'base_url': flask.request.base_url
     }
     try:
         return flask.render_template('index.html', **context)

@@ -28,6 +28,10 @@ th, td {
     position: absolute;
     left: 696px;
 }
+#panicIndicator {
+	color:red;
+	display:none;
+}
 input[type=number] {
     border: none;
     font-size: 12pt;
