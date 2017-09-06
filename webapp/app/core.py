@@ -20,6 +20,11 @@ def setup():
                     batteries[battery]['config'] = database.config_row_to_message(configrow)
     app.logger.info("Startup state: %s", batteries)
 
+def update_timeout(config):
+    now = datetime.now()
+    timeElapsed = (now - config['timestamp']).total_seconds() / 60
+    return max(0, int(config['manualTimeout'] - timeElapsed))
+
 def status_matches_config(status, config):
     # TODO: Match pump 255 vs 1
     fields = ['pump', 'targetFlow', 'targetLevel', 'minLevel', 'maxLevel']
@@ -52,7 +57,9 @@ def process_uplink(status):
         if config:
             if not status_matches_config(status, config):
                 # Config does not match, resend
-                # TODO: Modify manualTimeout
+                # First update timeout to subtract elapsed time
+                config = dict(config)
+                config['manualTimeout'] = update_timeout(config)
                 mqtt.send_command(app, config)
                 if config['ackTimestamp']:
                     app.logger.warn("Received config does not match, but config was previously acked")
