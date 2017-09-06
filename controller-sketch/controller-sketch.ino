@@ -138,6 +138,10 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
 
     unsigned downlinkBatId = port - RX_PORT;
 
+    battery[downlinkBatId]->panic = false;
+    for (size_t i=0;i<lengthof(battery[downlinkBatId]->flow);i++) battery[downlinkBatId]->flow[i]->enable();
+    for (size_t i=0;i<lengthof(battery[downlinkBatId]->level);i++) battery[downlinkBatId]->level[i]->enable();
+
     uint16_t timeout = (buf[0] << 8) | buf[1];
     battery[downlinkBatId]->setManualTimeout(timeout);
     if (timeout > 0) {
@@ -160,10 +164,6 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     battery[downlinkBatId]->level[0]->setMaxLevel(buf[13]);
     battery[downlinkBatId]->level[1]->setMaxLevel(buf[14]);
     battery[downlinkBatId]->level[2]->setMaxLevel(buf[15]);
-
-    battery[downlinkBatId]->panic = false;
-    for (size_t i=0;i<lengthof(battery[downlinkBatId]->flow);i++) battery[downlinkBatId]->flow[i]->enable();
-    for (size_t i=0;i<lengthof(battery[downlinkBatId]->level);i++) battery[downlinkBatId]->level[i]->enable();
 }
 
 void queueUplink() {
