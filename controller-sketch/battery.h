@@ -66,7 +66,7 @@ public:
   }
 
   void doLoop(unsigned long durationSoFar, bool /* manual */) {
-    if (durationSoFar > pumpOnDuration && getPumpState()) {
+    if (pumpDutyCycle < 255 && durationSoFar > pumpOnDuration && getPumpState()) {
       setPumpState(false);
     }
   }
