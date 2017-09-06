@@ -215,14 +215,16 @@ void setup() {
     battery[0] = new Battery();
     battery[0]->attachFlowController(0, 3, 23);
     battery[0]->attachLevelController(0, A0, 25);
-    battery[0]->attachLevelController(1, A1, 27);
+    // Sensor swapped with 1.1 to workaround hardware problem on shield or Arduino
+    battery[0]->attachLevelController(1, A4, 27);
     battery[0]->attachLevelController(2, A2, 29);
     battery[0]->attachFlowController(1, 4);
 
     battery[1] = new Battery();
     battery[1]->attachFlowController(0, 5, 31);
     battery[1]->attachLevelController(0, A3, 33);
-    battery[1]->attachLevelController(1, A4, 35);
+    // Sensor swapped with 0.1 to workaround hardware problem on shield or Arduino
+    battery[1]->attachLevelController(1, A1, 35);
     battery[1]->attachLevelController(2, A5, 37);
     battery[1]->attachFlowController(1, 8);
 
