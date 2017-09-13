@@ -11,7 +11,9 @@ setup(
 	'paho-mqtt',
         'gunicorn',
 	'PyMySQL',
-        'flask-user<0.7',
+	# 0.6.14 broke installs, 0.6.19 fixed them
+	# https://github.com/lingthio/Flask-User/issues/183
+        'flask-user<0.7,!=0.6.14,!=0.6.15,!=0.6.16,!=0.6.17,!=0.6.18'
         'flask-mail',
     ],
 )
