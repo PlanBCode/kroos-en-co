@@ -112,10 +112,6 @@
 				}
 
 {% else %}
-				// update pump indicators
-				pump = currentStat.pump;
-				for (var i=0;i<4;i++) document.getElementById('pump' + i + 'value').innerHTML = pump[i]/255.0 + '%';
-
 				// update flow indicators
 				trgFlow = currentStat.targetFlow;
 				document.getElementById('trgFlow').innerHTML = trgFlow;
