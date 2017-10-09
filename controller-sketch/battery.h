@@ -35,6 +35,7 @@ public:
   void disable() {
     enabled = false;
     digitalWrite(pumpPin, PUMP_OFF);
+    setPumpDutyCycle(0);
   }
 
   double getPumpDutyCycle() {
