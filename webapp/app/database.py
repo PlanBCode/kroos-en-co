@@ -90,6 +90,7 @@ def config_row_to_message(row):
         timestamp = datetime.strptime(row['timestamp'], datetime_fmt)
 
     return {
+      'id': row['id'],
       'timestamp': timestamp,
       'ackTimestamp': row['ackTimestamp'],
       'manualTimeout': row['manualTimeout'],
@@ -144,18 +145,19 @@ def insert_from_dict(db, table, values):
     db.commit()
     return c
 
-def update_from_dict(db, table, values):
+def update_from_dict(db, table, where, values):
     """
     Create and execute an insert query using the keys from the passed dict as
     field names and the values as the field values.  No escaping or checking
     happens on the field and table names.
     """
-    query = 'update {} set {}'.format(
+    query = 'update {} set {} where {}'.format(
         table,
         ', '.join('{}={}'.format(f, placeholder) for f in values.keys()),
+        ' and '.join('{}={}'.format(f, placeholder) for f in where.keys()),
     )
     c = db.cursor()
-    c.execute(query, list(values.values()))
+    c.execute(query, list(values.values()) + list(where.values()))
     db.commit()
     return c
 

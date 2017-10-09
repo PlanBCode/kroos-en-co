@@ -81,7 +81,7 @@ def process_uplink(status):
                 # Config matches, note it has been acked if not already
                 if not config['ackTimestamp']:
                     now = datetime.now()
-                    database.update_from_dict(db, 'config', {'ackTimestamp': now})
+                    database.update_from_dict(db, 'config', {'id': config['id']}, {'ackTimestamp': now})
                     config['ackTimestamp'] = now
     websocket.send_status(status, battery)
 
@@ -98,6 +98,8 @@ def process_command(cmd):
     # Insert into database
     cur = database.insert_from_dict(db, 'config', v)
     db.commit()
+    v['id'] = cur.lastrowid
+
     # Update last-known config
     batteries[cmd['battery']]['config'] = database.config_row_to_message(v)
     # Send config to node
