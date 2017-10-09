@@ -1,8 +1,8 @@
 drop table if exists config;
 create table config (
   `id` integer auto_increment,
-  `timestamp` timestamp,
-  `ackTimestamp` timestamp,
+  `timestamp` timestamp default 0,
+  `ackTimestamp` timestamp default 0,
   `battery` varchar(32),
   `username` varchar(32),
   `manualTimeout` int,
@@ -29,7 +29,7 @@ create table config (
 drop table if exists status;
 create table status (
   `id` integer auto_increment,
-  `timestamp` timestamp,
+  `timestamp` timestamp default 0,
   `battery` varchar(16),
   `panic` boolean,
   `manualTimeout` int,
