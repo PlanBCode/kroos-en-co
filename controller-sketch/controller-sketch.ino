@@ -11,6 +11,7 @@
 
 #include <lmic.h>
 #include <hal/hal.h>
+#include <avr/wdt.h>
 #include <SPI.h>
 #include "battery.h"
 
@@ -213,20 +214,20 @@ void queueUplink() {
 
 void setup() {
     battery[0] = new Battery();
-    battery[0]->attachFlowController(0, 3, 23);
+    battery[0]->attachFlowController(0, 8, 23);
     battery[0]->attachLevelController(0, A0, 25);
     // Sensor swapped with 1.1 to workaround hardware problem on shield or Arduino
-    battery[0]->attachLevelController(1, A4, 27);
+    battery[0]->attachLevelController(1, A1, 27);
     battery[0]->attachLevelController(2, A2, 29);
-    battery[0]->attachFlowController(1, 4);
+    battery[0]->attachFlowController(1, 5);
 
     battery[1] = new Battery();
-    battery[1]->attachFlowController(0, 5, 31);
+    battery[1]->attachFlowController(0, 4, 31);
     battery[1]->attachLevelController(0, A3, 33);
     // Sensor swapped with 0.1 to workaround hardware problem on shield or Arduino
-    battery[1]->attachLevelController(1, A1, 35);
+    battery[1]->attachLevelController(1, A4, 35);
     battery[1]->attachLevelController(2, A5, 37);
-    battery[1]->attachFlowController(1, 8);
+    battery[1]->attachFlowController(1, 3);
 
     for (size_t b=0; b<2; b++) {
       for (size_t i=0;i<lengthof(battery[b]->flow);i++) battery[b]->flow[i]->disable();
@@ -249,6 +250,9 @@ void setup() {
 
     // TODO: Less?
     LMIC_setClockError(MAX_CLOCK_ERROR * 5 / 100);
+
+    // Enable watchdog timer
+    wdt_enable(WDTO_2S);
 }
 
 void loop() {
@@ -264,5 +268,6 @@ void loop() {
         lastCycleTime = now;
     }
     for(size_t i=0;i<lengthof(battery);i++) battery[i]->doLoop(now - lastCycleTime);
+    wdt_reset();
 }
 
