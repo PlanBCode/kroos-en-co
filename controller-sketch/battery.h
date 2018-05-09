@@ -265,6 +265,11 @@ public:
     uint16_t read = analogRead(sensorPin);
     currentLevel = a*read + b;
     printf("Level adc: %u, mm: %d\n", read, (int)(currentLevel * 10));
+    // Prevent underflow when the sensor is around zero
+    if (currentLevel < 0) {
+      printf("Level < 0mm, setting to 0\n");
+      currentLevel = 0;
+    }
     if (currentLevel < minLevel || currentLevel > maxLevel) {
       return true;
     }
