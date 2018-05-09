@@ -71,6 +71,7 @@ public:
     // Enable the pumps at the start of the cycle if required
     if (pumpPin != -1 && manual && pumpDutyCycle)
       setPumpState(true);
+    return false;
   }
 
   void doLoop(unsigned long durationSoFar, bool /* manual */) {
