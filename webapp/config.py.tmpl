@@ -6,6 +6,10 @@ TTN_ACCESS_KEY=''
 ERRORS_TO=[]
 ERRORS_FROM='noreply@kroos.co'
 
+# Set to True to only receive data from MQTT/TTN, but not send data.
+# This is useful for testing alongside the production server.
+TTN_RECEIVE_ONLY=False
+
 # Enable these to use mysql, otherwise sqlite3 will be used
 #MYSQL_HOST='localhost'
 #MYSQL_USERNAME=''

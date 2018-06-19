@@ -91,8 +91,11 @@ def send_command(app, config):
     }
     topic = "{}/devices/{}/down".format(app.config['TTN_APP_ID'], device)
     payload = json.dumps(msg)
-    app.mqtt.publish(topic, payload)
-    app.logger.debug("Publishing to topic %s: %s", topic, payload)
+    if not app.config.TTN_RECEIVE_ONLY:
+        app.mqtt.publish(topic, payload)
+        app.logger.debug("Publishing to topic %s: %s", topic, payload)
+    else:
+        app.logger.debug("Would have published to topic %s: %s", topic, payload)
 
 def encode_command(msg):
     raw = bytearray(16)

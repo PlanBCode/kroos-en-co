@@ -15,6 +15,7 @@ app.config.update(dict(
     TTN_CA_CERT_PATH='mqtt-ca.pem',
     TTN_APP_ID='lankheet',
     TTN_PORT=8883,
+    TTN_RECEIVE_ONLY=False,
     DEVICES={
         # Maps TTN device id to list of connected battery ids
         'stuurkast-3': ['lankheet-1', 'lankheet-2'],
