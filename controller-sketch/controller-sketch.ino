@@ -138,6 +138,8 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     }
 
     unsigned downlinkBatId = port - RX_PORT;
+    Serial.print("Received config for battery ");
+    Serial.println(downlinkBatId);
 
     battery[downlinkBatId]->panic = false;
     for (size_t i=0;i<lengthof(battery[downlinkBatId]->flow);i++) battery[downlinkBatId]->flow[i]->enable();
