@@ -339,6 +339,11 @@
             <tr style="height:2em;">
                 <td>debiet in {{ id }} (m³/u)</td>
                 <td id="curFlowIn"></td>
+{% if commands_allowed %}
+                <td><input type="number" id="trgFlow" value="" min="0" max="80" style="width:100px; margin-left:0px;" oninput="setTrgFlow(this.value);" /></td>
+{% else %}
+                <td id="trgFlow"></td>
+{% endif %}
             </tr>
             <tr style="height:2em;">
                 <td>niveau {{id}}.1 (cm)</td>
@@ -382,11 +387,6 @@
             <tr style="height:2em;">
                 <td>debiet uit {{ id }} (m³/u)</td>
                 <td id="curFlowOut"></td>
-{% if commands_allowed %}
-                <td><input type="number" id="trgFlow" value="" min="0" max="80" style="width:100px; margin-left:0px;" oninput="setTrgFlow(this.value);" /></td>
-{% else %}
-                <td id="trgFlow"></td>
-{% endif %}
             </tr>
         </table>
         <br/>
