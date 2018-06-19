@@ -255,6 +255,7 @@
                 updateInterface(currentStat);
             }
         </script>
+{% if id %}
         <script>
             var socket;
             $(function() {
@@ -282,6 +283,7 @@
                 init();
             });
         </script>
+{% endif %}
 {% endblock %}
 
 {% block main %}
