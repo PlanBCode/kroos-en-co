@@ -231,7 +231,7 @@ void setup() {
       for (size_t i=0;i<lengthof(battery[b]->flow);i++) battery[b]->flow[i]->disable();
       for (size_t i=0;i<lengthof(battery[b]->level);i++) battery[b]->level[i]->disable();
     }
-    
+
     uplinkBatId = 0;
 
     Serial.begin(9600);

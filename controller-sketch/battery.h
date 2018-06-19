@@ -227,7 +227,7 @@ public:
     enabled = false;
     digitalWrite(pumpPin, PUMP_OFF);
   }
-  
+
   double getCurrentLevel() {
     return currentLevel;
   }
@@ -236,7 +236,7 @@ public:
     printf("SetTargetLevel: %d\n", (int)value);
     targetLevel = value;
   }
-  
+
   double getTargetLevel() {
     return targetLevel;
   }
@@ -245,7 +245,7 @@ public:
     printf("SetMinLevel: %d\n", (int)value);
     minLevel = value;
   }
-  
+
   double getMinLevel() {
     return minLevel;
   }
@@ -254,7 +254,7 @@ public:
     printf("SetMaxLevel: %d\n", (int)value);
     maxLevel = value;
   }
-  
+
   double getMaxLevel() {
     return maxLevel;
   }
