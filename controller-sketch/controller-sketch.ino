@@ -215,19 +215,24 @@ void queueUplink() {
 }
 
 void setup() {
+    // Use the external AREF, which is wired to 3.3V. Never disable
+    // this, since using analogRead with the default VCC or internal
+    // 1.1V reference drives the AREF pin, causing a short circuit.
+    analogReference(EXTERNAL);
+
     battery[0] = new Battery();
     battery[0]->attachFlowController(0, 8, 23);
-    // 5000mV, 1023 steps, 100Ohm, 0.154mA/cm. 4mA/0.154 - 20cm
-    battery[0]->attachLevelController(0, A0, 25, 5000.0/1023/100/0.176, -4/0.176 - 20);
-    battery[0]->attachLevelController(1, A1, 27, 5000.0/1023/100/0.165, -4/0.165 - 35);
-    battery[0]->attachLevelController(2, A2, 29, 5000.0/1023/100/0.154, -4/0.154 - 20);
+    // 3316mV, 1023 steps, 100Ohm, 0.154mA/cm. 4mA/0.154 - 20cm
+    battery[0]->attachLevelController(0, A0, 25, 3316.0/1023/100/0.176, -4/0.176 - 20);
+    battery[0]->attachLevelController(1, A1, 27, 3316.0/1023/100/0.165, -4/0.165 - 35);
+    battery[0]->attachLevelController(2, A2, 29, 3316.0/1023/100/0.154, -4/0.154 - 20);
     battery[0]->attachFlowController(1, 5);
 
     battery[1] = new Battery();
     battery[1]->attachFlowController(0, 4, 31);
-    battery[1]->attachLevelController(0, A3, 33, 5000.0/1023/100/0.176, -4/0.176 - 16);
-    battery[1]->attachLevelController(1, A4, 35, 5000.0/1023/100/0.159, -4/0.159 - 24);
-    battery[1]->attachLevelController(2, A5, 37, 5000.0/1023/100/0.154, -4/0.154 - 13);
+    battery[1]->attachLevelController(0, A3, 33, 3316.0/1023/100/0.176, -4/0.176 - 16);
+    battery[1]->attachLevelController(1, A4, 35, 3316.0/1023/100/0.159, -4/0.159 - 24);
+    battery[1]->attachLevelController(2, A5, 37, 3316.0/1023/100/0.154, -4/0.154 - 13);
     battery[1]->attachFlowController(1, 3);
 
     for (size_t b=0; b<2; b++) {
