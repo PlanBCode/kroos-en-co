@@ -133,7 +133,7 @@ def calibrate_config(app, battery, config):
             ma_per_cm = app.calibration[battery].getfloat('factor_ma_per_cm_{}'.format(i))
             offset_cm = app.calibration[battery].getfloat('offset_cm_{}'.format(i))
             mA = (cm - offset_cm) * ma_per_cm
-            raw = (mA - offset_mA) / to_mA
+            raw = int((mA - offset_mA) / to_mA)
             # TODO: Error message for user?
             raw = min(255, max(0, raw))
 
