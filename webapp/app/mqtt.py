@@ -3,6 +3,7 @@ import threading
 import json
 import base64
 import binascii
+import configparser
 
 from . import core
 
@@ -59,6 +60,7 @@ def process_data(app, msg, payload_raw):
     battery_num = msg["port"] - 1
     battery = device_to_battery(app, msg["dev_id"], battery_num)
     status = decode_status(payload_raw)
+    calibrate_status(app, battery, status)
     status['battery'] = battery
     app.logger.debug("Decoded status: %s", status)
     core.process_uplink(status)
@@ -80,8 +82,10 @@ def device_to_battery(app, device, battery_num):
 	return app.config['DEVICES'][device][battery_num]
 
 def send_command(app, config):
-    app.logger.debug("Sending command: %s", str(config))
     device, battery_num = battery_to_device(app, config['battery'])
+
+    calibrate_config(app, battery_num, config)
+    app.logger.debug("Sending command: %s", str(config))
 
     msg = {
 	"port": 1 + battery_num,
@@ -106,16 +110,35 @@ def encode_command(msg):
     raw[4] = msg['pump'][2]
     raw[5] = msg['pump'][3]
     raw[6] = msg['targetFlow'];
-    raw[7] = msg['targetLevel'][0];
-    raw[8] = msg['targetLevel'][1];
-    raw[9] = msg['targetLevel'][2];
-    raw[10] = msg['minLevel'][0];
-    raw[11] = msg['minLevel'][1];
-    raw[12] = msg['minLevel'][2];
-    raw[13] = msg['maxLevel'][0];
-    raw[14] = msg['maxLevel'][1];
-    raw[15] = msg['maxLevel'][2];
+    raw[7] = msg['targetLevelRaw'][0];
+    raw[8] = msg['targetLevelRaw'][1];
+    raw[9] = msg['targetLevelRaw'][2];
+    raw[10] = msg['minLevelRaw'][0];
+    raw[11] = msg['minLevelRaw'][1];
+    raw[12] = msg['minLevelRaw'][2];
+    raw[13] = msg['maxLevelRaw'][0];
+    raw[14] = msg['maxLevelRaw'][1];
+    raw[15] = msg['maxLevelRaw'][2];
     return raw
+
+def calibrate_config(app, battery, config):
+    for key in ('targetLevel', 'minLevel', 'maxLevel'):
+        raw_key = key + 'Raw'
+
+        config[raw_key] = []
+        i = 1
+        for cm in config[key]:
+            to_mA = app.config['CALIBRATION_TO_MA']
+            offset_mA = app.config['CALIBRATION_OFFSET_MA']
+            ma_per_cm = app.calibration[battery].getfloat('factor_ma_per_cm_{}'.format(i))
+            offset_cm = app.calibration[battery].getfloat('offset_cm_{}'.format(i))
+            mA = (cm - offset_cm) * ma_per_cm
+            raw = (mA - offset_mA) / to_mA
+            # TODO: Error message for user?
+            raw = min(255, max(0, raw))
+
+            config[raw_key].append(raw)
+            i += 1
 
 def decode_status(raw):
     status = {}
@@ -127,11 +150,56 @@ def decode_status(raw):
     status['pump'] = [raw[2], raw[3], raw[4], raw[5]]
     status['currentFlow'] = [raw[6], raw[7]]
     status['targetFlow'] = raw[8]
-    status['currentLevel'] = [raw[9], raw[10], raw[11]]
-    status['targetLevel'] = [raw[12], raw[13], raw[14]]
-    status['minLevel'] = [raw[15], raw[16], raw[17]]
-    status['maxLevel'] = [raw[18], raw[19], raw[20]]
+    status['currentLevelRaw'] = [raw[9], raw[10], raw[11]]
+    status['targetLevelRaw'] = [raw[12], raw[13], raw[14]]
+    status['minLevelRaw'] = [raw[15], raw[16], raw[17]]
+    status['maxLevelRaw'] = [raw[18], raw[19], raw[20]]
     return status
+
+def calibrate_status(app, battery, status):
+    for key in ('currentLevel', 'targetLevel', 'minLevel', 'maxLevel'):
+        raw_key = key + 'Raw'
+        mA_key = key + 'mA'
+
+        status[key] = []
+        status[mA_key] = []
+        i = 1
+
+        for raw in status[raw_key]:
+            to_mA = app.config['CALIBRATION_TO_MA']
+            offset_mA = app.config['CALIBRATION_OFFSET_MA']
+            ma_per_cm = app.calibration[battery].getfloat('factor_ma_per_cm_{}'.format(i))
+            offset_cm = app.calibration[battery].getfloat('offset_cm_{}'.format(i))
+            mA = raw * to_mA + offset_mA
+            cm = mA / ma_per_cm + offset_cm
+
+            status[mA_key].append(mA)
+            status[key].append(cm)
+            i += 1
+
+CALIBRATION_FILE='calibration.ini'
+
+def read_calibration(app):
+    app.calibration = configparser.ConfigParser()
+    app.calibration.read(CALIBRATION_FILE)
+
+    for batteries in app.config['DEVICES'].values():
+        for battery in batteries:
+            for key, default_value in (
+                ('factor_ma_per_cm_{}', app.config['DEFAULT_CALIBRATION_MA_PER_CM']),
+                ('offset_cm_{}', app.config['DEFAULT_CALIBRATION_OFFSET_CM']),
+            ):
+                for i in range(1, 4):
+                    indexed_key = key.format(i)
+                    if battery not in app.calibration:
+                        app.calibration[battery] = {}
+                    if indexed_key not in app.calibration[battery]:
+                        app.calibration[battery][indexed_key] = str(default_value)
+    write_calibration(app)
+
+def write_calibration(app):
+    with open(CALIBRATION_FILE, 'w') as f:
+        app.calibration.write(f)
 
 def run(app):
     client = mqtt.Client(userdata={'app': app})
@@ -149,6 +217,8 @@ def run(app):
 
     client.connect(host, port=port)
     app.mqtt = client
+
+    read_calibration(app)
 
     threading.Thread(target=mqtt_thread, args=(client,), daemon=True).start()
 

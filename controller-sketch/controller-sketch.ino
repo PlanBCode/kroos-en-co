@@ -156,21 +156,21 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
 
     battery[downlinkBatId]->flow[0]->setTargetFlow(buf[6]);
 
-    battery[downlinkBatId]->level[0]->setTargetLevel(buf[7]);
-    battery[downlinkBatId]->level[1]->setTargetLevel(buf[8]);
-    battery[downlinkBatId]->level[2]->setTargetLevel(buf[9]);
+    battery[downlinkBatId]->level[0]->setTargetLevel(buf[7] * 4);
+    battery[downlinkBatId]->level[1]->setTargetLevel(buf[8] * 4);
+    battery[downlinkBatId]->level[2]->setTargetLevel(buf[9] * 4);
 
-    battery[downlinkBatId]->level[0]->setMinLevel(buf[10]);
-    battery[downlinkBatId]->level[1]->setMinLevel(buf[11]);
-    battery[downlinkBatId]->level[2]->setMinLevel(buf[12]);
+    battery[downlinkBatId]->level[0]->setMinLevel(buf[10] * 4);
+    battery[downlinkBatId]->level[1]->setMinLevel(buf[11] * 4);
+    battery[downlinkBatId]->level[2]->setMinLevel(buf[12] * 4);
 
-    battery[downlinkBatId]->level[0]->setMaxLevel(buf[13]);
-    battery[downlinkBatId]->level[1]->setMaxLevel(buf[14]);
-    battery[downlinkBatId]->level[2]->setMaxLevel(buf[15]);
+    battery[downlinkBatId]->level[0]->setMaxLevel(buf[13] * 4);
+    battery[downlinkBatId]->level[1]->setMaxLevel(buf[14] * 4);
+    battery[downlinkBatId]->level[2]->setMaxLevel(buf[15] * 4);
 }
 
 void queueUplink() {
-    uint8_t buf[27];
+    uint8_t buf[21];
     // Timeout in minutes
     uint16_t timeout = min(battery[uplinkBatId]->getManualTimeout(), 0x7FFF);
     if (battery[uplinkBatId]->panic) {
@@ -190,30 +190,22 @@ void queueUplink() {
     buf[7]  = battery[uplinkBatId]->flow[1]->getCurrentFlow();
     buf[8]  = battery[uplinkBatId]->flow[0]->getTargetFlow();
 
-    // Levels are in cm
-    buf[9]  = battery[uplinkBatId]->level[0]->getCurrentLevel();
-    buf[10] = battery[uplinkBatId]->level[1]->getCurrentLevel();
-    buf[11] = battery[uplinkBatId]->level[2]->getCurrentLevel();
+    // Levels are in ADC value, divided by four to fit in a byte
+    buf[9]  = battery[uplinkBatId]->level[0]->getCurrentLevel() / 4;
+    buf[10] = battery[uplinkBatId]->level[1]->getCurrentLevel() / 4;
+    buf[11] = battery[uplinkBatId]->level[2]->getCurrentLevel() / 4;
 
-    buf[12] = battery[uplinkBatId]->level[0]->getTargetLevel();
-    buf[13] = battery[uplinkBatId]->level[1]->getTargetLevel();
-    buf[14] = battery[uplinkBatId]->level[2]->getTargetLevel();
+    buf[12] = battery[uplinkBatId]->level[0]->getTargetLevel() / 4;
+    buf[13] = battery[uplinkBatId]->level[1]->getTargetLevel() / 4;
+    buf[14] = battery[uplinkBatId]->level[2]->getTargetLevel() / 4;
 
-    buf[15] = battery[uplinkBatId]->level[0]->getMinLevel();
-    buf[16] = battery[uplinkBatId]->level[1]->getMinLevel();
-    buf[17] = battery[uplinkBatId]->level[2]->getMinLevel();
+    buf[15] = battery[uplinkBatId]->level[0]->getMinLevel() / 4;
+    buf[16] = battery[uplinkBatId]->level[1]->getMinLevel() / 4;
+    buf[17] = battery[uplinkBatId]->level[2]->getMinLevel() / 4;
 
-    buf[18] = battery[uplinkBatId]->level[0]->getMaxLevel();
-    buf[19] = battery[uplinkBatId]->level[1]->getMaxLevel();
-    buf[20] = battery[uplinkBatId]->level[2]->getMaxLevel();
-
-    // Raw ADC values
-    buf[21] = battery[uplinkBatId]->level[0]->getAdcValue() >> 8;
-    buf[22] = battery[uplinkBatId]->level[0]->getAdcValue();
-    buf[23] = battery[uplinkBatId]->level[1]->getAdcValue() >> 8;
-    buf[24] = battery[uplinkBatId]->level[1]->getAdcValue();
-    buf[25] = battery[uplinkBatId]->level[2]->getAdcValue() >> 8;
-    buf[26] = battery[uplinkBatId]->level[2]->getAdcValue();
+    buf[18] = battery[uplinkBatId]->level[0]->getMaxLevel() / 4;
+    buf[19] = battery[uplinkBatId]->level[1]->getMaxLevel() / 4;
+    buf[20] = battery[uplinkBatId]->level[2]->getMaxLevel() / 4;
 
     // Prepare upstream data transmission at the next possible time.
     LMIC_setTxData2(TX_PORT + uplinkBatId, buf, sizeof(buf), 0);
@@ -231,6 +223,7 @@ void setup() {
     battery[0] = new Battery();
     battery[0]->attachFlowController(0, 8, 23);
     // 3316mV, 1023 steps, 100Ohm, 0.154mA/cm. 4mA/0.154 - 20cm
+    // Calibration values are used for debug printing only!
     battery[0]->attachLevelController(0, A0, 25, 3316.0/1023/100/0.176, -4/0.176 - 20);
     battery[0]->attachLevelController(1, A1, 27, 3316.0/1023/100/0.165, -4/0.165 - 35);
     battery[0]->attachLevelController(2, A2, 29, 3316.0/1023/100/0.154, -4/0.154 - 20);

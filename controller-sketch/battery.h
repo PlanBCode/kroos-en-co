@@ -191,7 +191,7 @@ public:
 
   PID* pid;
   double pidOutput;
-  const double Kp=0.04, Ki=0.001, Kd=0;
+  const double Kp=0.012, Ki=0.0003, Kd=0;
 
   LevelController(int sensorPin, int pumpPin, double a, double b)
   : PumpController(pumpPin) {
@@ -268,14 +268,10 @@ public:
   bool doCycle(unsigned long prevDuration, bool manual) {
     PumpController::doCycle(prevDuration, manual);
 
-    this->adc_value = analogRead(sensorPin);
-    currentLevel = a*this->adc_value + b;
-    printf("Level adc: %u, mm: %d\n", this->adc_value, (int)(currentLevel * 10));
-    // Prevent underflow when the sensor is around zero
-    if (currentLevel < 0) {
-      printf("Level < 0mm, setting to 0\n");
-      currentLevel = 0;
-    }
+    currentLevel = analogRead(sensorPin);
+    double cm = a*this->adc_value + b;
+    printf("Note: calibration values for calculating mm are not synchronized with server!\n");
+    printf("Level adc: %u, mm: %d\n", this->adc_value, (int)(cm * 10));
     if (currentLevel < minLevel || currentLevel > maxLevel) {
       return true;
     }

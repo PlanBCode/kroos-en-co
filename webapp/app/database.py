@@ -103,6 +103,7 @@ def config_row_to_message(row):
     }
 
 def status_message_to_row(msg):
+    # TODO: Store currentLevelRaw values?
     return {
       'manualTimeout': msg['manualTimeout'],
       'battery': msg['battery'],
