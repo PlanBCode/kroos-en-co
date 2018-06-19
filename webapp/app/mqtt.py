@@ -84,7 +84,7 @@ def device_to_battery(app, device, battery_num):
 def send_command(app, config):
     device, battery_num = battery_to_device(app, config['battery'])
 
-    calibrate_config(app, battery_num, config)
+    calibrate_config(app, config['battery'], config)
     app.logger.debug("Sending command: %s", str(config))
 
     msg = {
@@ -143,7 +143,7 @@ def calibrate_config(app, battery, config):
 def decode_status(raw):
     status = {}
     status['panic'] = False
-    status['manualTimeout'] = (raw[0] << 8 | raw[1]) & 0x7FFFF
+    status['manualTimeout'] = (raw[0] << 8 | raw[1]) & 0x7FFF
     # MSB of the timeout field indicates panic
     if raw[0] & 0x80:
         status['panic'] = True

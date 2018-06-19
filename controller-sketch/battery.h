@@ -181,7 +181,6 @@ public:
   // Value in cm = analog reading * a + b
   double a;
   double b;
-  uint16_t adc_value;
   double currentLevel;
   double targetLevel;
   double minLevel;
@@ -208,7 +207,7 @@ public:
     targetLevel = 0;
     currentLevel = 0;
     minLevel = 0;
-    maxLevel = 106; // Max sensor reading
+    maxLevel = 1023; // Max ADC reading
 
     pid = new PID(&currentLevel, &pidOutput, &targetLevel, Kp, Ki, Kd, REVERSE);
     // The library expects ms, so divides this by 1000 so the Ki/Kd
@@ -231,10 +230,6 @@ public:
 
   double getCurrentLevel() {
     return currentLevel;
-  }
-
-  uint16_t getAdcValue() {
-    return adc_value;
   }
 
   void setTargetLevel(double value) {
@@ -269,9 +264,9 @@ public:
     PumpController::doCycle(prevDuration, manual);
 
     currentLevel = analogRead(sensorPin);
-    double cm = a*this->adc_value + b;
+    double cm = a*currentLevel + b;
     printf("Note: calibration values for calculating mm are not synchronized with server!\n");
-    printf("Level adc: %u, mm: %d\n", this->adc_value, (int)(cm * 10));
+    printf("Level adc: %u, mm: %d\n", (unsigned)currentLevel, (int)(cm * 10));
     if (currentLevel < minLevel || currentLevel > maxLevel) {
       return true;
     }
