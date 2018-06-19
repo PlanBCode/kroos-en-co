@@ -181,6 +181,7 @@ public:
   // Value in cm = analog reading * a + b
   double a;
   double b;
+  uint16_t adc_value;
   double currentLevel;
   double targetLevel;
   double minLevel;
@@ -232,6 +233,10 @@ public:
     return currentLevel;
   }
 
+  uint16_t getAdcValue() {
+    return adc_value;
+  }
+
   void setTargetLevel(double value) {
     printf("SetTargetLevel: %d\n", (int)value);
     targetLevel = value;
@@ -263,9 +268,9 @@ public:
   bool doCycle(unsigned long prevDuration, bool manual) {
     PumpController::doCycle(prevDuration, manual);
 
-    uint16_t read = analogRead(sensorPin);
-    currentLevel = a*read + b;
-    printf("Level adc: %u, mm: %d\n", read, (int)(currentLevel * 10));
+    this->adc_value = analogRead(sensorPin);
+    currentLevel = a*this->adc_value + b;
+    printf("Level adc: %u, mm: %d\n", this->adc_value, (int)(currentLevel * 10));
     // Prevent underflow when the sensor is around zero
     if (currentLevel < 0) {
       printf("Level < 0mm, setting to 0\n");

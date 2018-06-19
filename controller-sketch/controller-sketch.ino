@@ -170,7 +170,7 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
 }
 
 void queueUplink() {
-    uint8_t buf[21];
+    uint8_t buf[27];
     // Timeout in minutes
     uint16_t timeout = min(battery[uplinkBatId]->getManualTimeout(), 0xFFFF - 1);
     if (battery[uplinkBatId]->panic) {
@@ -206,6 +206,14 @@ void queueUplink() {
     buf[18] = battery[uplinkBatId]->level[0]->getMaxLevel();
     buf[19] = battery[uplinkBatId]->level[1]->getMaxLevel();
     buf[20] = battery[uplinkBatId]->level[2]->getMaxLevel();
+
+    // Raw ADC values
+    buf[21] = battery[uplinkBatId]->level[0]->getAdcValue() >> 8;
+    buf[22] = battery[uplinkBatId]->level[0]->getAdcValue();
+    buf[23] = battery[uplinkBatId]->level[1]->getAdcValue() >> 8;
+    buf[24] = battery[uplinkBatId]->level[1]->getAdcValue();
+    buf[25] = battery[uplinkBatId]->level[2]->getAdcValue() >> 8;
+    buf[26] = battery[uplinkBatId]->level[2]->getAdcValue();
 
     // Prepare upstream data transmission at the next possible time.
     LMIC_setTxData2(TX_PORT + uplinkBatId, buf, sizeof(buf), 0);
