@@ -215,18 +215,18 @@ void queueUplink() {
 void setup() {
     battery[0] = new Battery();
     battery[0]->attachFlowController(0, 8, 23);
-    battery[0]->attachLevelController(0, A0, 25);
+    battery[0]->attachLevelController(0, A0, 25, 0.28, -43);
     // Sensor swapped with 1.1 to workaround hardware problem on shield or Arduino
-    battery[0]->attachLevelController(1, A1, 27);
-    battery[0]->attachLevelController(2, A2, 29);
+    battery[0]->attachLevelController(1, A1, 27, 0.30, -59);
+    battery[0]->attachLevelController(2, A2, 29, 0.32, -46);
     battery[0]->attachFlowController(1, 5);
 
     battery[1] = new Battery();
     battery[1]->attachFlowController(0, 4, 31);
-    battery[1]->attachLevelController(0, A3, 33);
+    battery[1]->attachLevelController(0, A3, 33, 0.28, -39);
     // Sensor swapped with 0.1 to workaround hardware problem on shield or Arduino
-    battery[1]->attachLevelController(1, A4, 35);
-    battery[1]->attachLevelController(2, A5, 37);
+    battery[1]->attachLevelController(1, A4, 35, 0.31, -49);
+    battery[1]->attachLevelController(2, A5, 37, 0.32, -39);
     battery[1]->attachFlowController(1, 3);
 
     for (size_t b=0; b<2; b++) {

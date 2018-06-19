@@ -178,10 +178,9 @@ public:
 class LevelController : public PumpController {
 public:
   int sensorPin;
-  // 5000mV, 1023 steps, 100Ohm, 0.15mA/cm
-  double a=5000.0/1023/100/0.15;
-  // Zero is 4mA
-  double b=-4/0.15;
+  // Value in cm = analog reading * a + b
+  double a;
+  double b;
   double currentLevel;
   double targetLevel;
   double minLevel;
@@ -193,10 +192,12 @@ public:
   double pidOutput;
   const double Kp=0.04, Ki=0.001, Kd=0;
 
-  LevelController(int sensorPin, int pumpPin)
+  LevelController(int sensorPin, int pumpPin, double a, double b)
   : PumpController(pumpPin) {
     this->sensorPin = sensorPin;
     this->pumpPin = pumpPin;
+    this->a = a;
+    this->b = b;
 
     pinMode(pumpPin, OUTPUT);
     setPumpState(0);
@@ -303,8 +304,8 @@ public:
     flow[i] = new FlowController(sensorPin, pumpPin);
   }
 
-  void attachLevelController(size_t i, int sensorPin, int pumpPin) {
-    level[i] = new LevelController(sensorPin, pumpPin);
+  void attachLevelController(size_t i, int sensorPin, int pumpPin, double a, double b) {
+    level[i] = new LevelController(sensorPin, pumpPin, a, b);
   }
 
   void setManualTimeout(unsigned int timeout) {
