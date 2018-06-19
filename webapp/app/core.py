@@ -26,6 +26,13 @@ def update_timeout(config):
     return max(0, int(config['manualTimeout'] - timeElapsed))
 
 def status_matches_config(status, config):
+    # Make sure that the config row has raw values to compare. This is
+    # needed when the config is loaded from the database, but also
+    # makes sure that changing the calibration values invalidates the
+    # config and makes sure a new one is sent.
+    # TODO: Should this really call this mqtt function directly?
+    mqtt.calibrate_config(app, config['battery'], config)
+
     expectedTimeout = update_timeout(config)
     app.logger.debug("Timeout expected: %s, received %s. Original timeout: %s", expectedTimeout, status['manualTimeout'], config['manualTimeout'])
     margin = 2 # minutes
@@ -33,7 +40,7 @@ def status_matches_config(status, config):
             or status['manualTimeout'] > expectedTimeout + margin):
         return False
 
-    fields = ['targetFlow', 'targetLevel', 'minLevel', 'maxLevel']
+    fields = ['targetFlow', 'targetLevelRaw', 'minLevelRaw', 'maxLevelRaw']
 
     # Only check pump state when in manual mode
     if status['manualTimeout']:
