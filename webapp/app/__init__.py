@@ -30,8 +30,8 @@ app.config.update(dict(
     # links in outgoing e-mails
     SERVER_NAME=os.environ.get('FLASK_SERVER_NAME', None),
 
-    # 3316mV / 1023 ADC steps / 100Ω
-    CALIBRATION_TO_MA=3316.0/1023/100,
+    # 3316mV / 1023 ADC steps / scale to 255 / 100Ω
+    CALIBRATION_TO_MA=3316.0/1023*4/100,
     CALIBRATION_OFFSET_MA=-4,
     DEFAULT_CALIBRATION_MA_PER_CM=0.15,
     DEFAULT_CALIBRATION_OFFSET_CM=0,
