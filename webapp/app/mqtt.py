@@ -120,9 +120,9 @@ def encode_command(msg):
 def decode_status(raw):
     status = {}
     status['panic'] = False
-    status['manualTimeout'] = raw[0] << 8 | raw[1]
-    if status['manualTimeout'] == 0xffff: # -1 means panic
-        status['manualTimeout'] = 0
+    status['manualTimeout'] = (raw[0] << 8 | raw[1]) & 0x7FFFF
+    # MSB of the timeout field indicates panic
+    if raw[0] & 0x80:
         status['panic'] = True
     status['pump'] = [raw[2], raw[3], raw[4], raw[5]]
     status['currentFlow'] = [raw[6], raw[7]]

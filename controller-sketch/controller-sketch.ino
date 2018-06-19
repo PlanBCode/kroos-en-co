@@ -172,9 +172,9 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
 void queueUplink() {
     uint8_t buf[27];
     // Timeout in minutes
-    uint16_t timeout = min(battery[uplinkBatId]->getManualTimeout(), 0xFFFF - 1);
+    uint16_t timeout = min(battery[uplinkBatId]->getManualTimeout(), 0x7FFF);
     if (battery[uplinkBatId]->panic) {
-      timeout = 0xFFFF;
+      timeout |= 0x8000;
     }
     buf[0]  = timeout >> 8;
     buf[1]  = timeout;
