@@ -91,6 +91,7 @@ def config_row_to_message(row):
 
     return {
       'id': row['id'],
+      'username': row['username'],
       'timestamp': timestamp,
       'ackTimestamp': row['ackTimestamp'],
       'manualTimeout': row['manualTimeout'],
