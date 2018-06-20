@@ -95,7 +95,7 @@ def send_command(app, config):
     }
     topic = "{}/devices/{}/down".format(app.config['TTN_APP_ID'], device)
     payload = json.dumps(msg)
-    if not app.config['TTN_RECEIVE_ONLY']:
+    if not app.config.get('TTN_RECEIVE_ONLY', False):
         app.mqtt.publish(topic, payload)
         app.logger.debug("Publishing to topic %s: %s", topic, payload)
     else:
