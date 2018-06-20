@@ -264,7 +264,7 @@
                     socket.emit('select_battery', {battery: {{ id|tojson }}});
                 });
                 socket.on('status', function(msg) {
-                    $('#output').append(JSON.stringify(msg) + '\n');
+                    $('#output').append("status: " + JSON.stringify(msg) + '\n');
                     // TODO: if ignoring msg because of change and
                     // config received is different from currentStat,
                     // show a warning?
@@ -276,6 +276,9 @@
                     //~ if (!change)
                         //~ updateInterface(msg);
                     updateInterface();
+                });
+                socket.on('config', function(msg) {
+                    $('#output').append("config: " + JSON.stringify(msg) + '\n');
                 });
                 socket.on('message', function(msg) {
                     $('#output').append(JSON.stringify(msg) + '\n');

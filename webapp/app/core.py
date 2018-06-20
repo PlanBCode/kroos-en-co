@@ -57,6 +57,9 @@ def status_matches_config(status, config):
 def status_for_battery(battery):
     return batteries[battery]['status']
 
+def config_for_battery(battery):
+    return batteries[battery]['config']
+
 def process_uplink(status):
     status['timestamp'] = datetime.now()
 
@@ -94,6 +97,7 @@ def process_uplink(status):
                     now = datetime.now()
                     database.update_from_dict(db, 'config', {'id': config['id']}, {'ackTimestamp': now})
                     config['ackTimestamp'] = now
+                    websocket.send_config(config)
     websocket.send_status(status, battery)
 
 def process_command(config):
@@ -118,5 +122,6 @@ def process_command(config):
     mqtt.send_command(app, config)
 
     websocket.reply_message('Commando wordt zo snel mogelijk verstuurd')
+    websocket.send_config(config)
 
 # vim: set sts=4 sw=4 expandtab:

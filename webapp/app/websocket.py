@@ -32,6 +32,12 @@ def handle_select_battery(msg):
         status = convert_timestamp(status)
         app.logger.debug("Sending initial status: %s", str(status))
         emit('status', status)
+    config = core.config_for_battery(battery)
+    # Send the most recent config, if any
+    if config:
+        config = convert_timestamp(config)
+        app.logger.debug("Sending initial config: %s", str(config))
+        emit('config', config)
     # And subscribe to all future status updates for this battery
     join_room(battery)
 
@@ -49,4 +55,10 @@ def send_status(status, battery):
     app.logger.debug("Broadcasting status for %s: %s", battery, str(status))
     status = convert_timestamp(status)
     app.socketio.emit('status', status, room=battery)
+
+def send_config(config):
+    battery = config['battery']
+    app.logger.debug("Broadcasting config for %s: %s", battery, str(config))
+    config = convert_timestamp(config)
+    app.socketio.emit('config', config, room=battery)
 
