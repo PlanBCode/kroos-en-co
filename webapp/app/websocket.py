@@ -10,6 +10,15 @@ def handle_error(e):
     reply_message('Fout in afhandeling: ' + str(e))
     raise e
 
+def convert_timestamp(info):
+    """
+    Convert the timestamp element in a status or config dict to
+    string. Returns a copy of the dict passed.
+    """
+    info = dict(info)
+    info['timestamp'] = info['timestamp'].isoformat()
+    return info
+
 @app.socketio.on('select_battery')
 def handle_select_battery(msg):
     battery = msg['battery']
@@ -17,6 +26,7 @@ def handle_select_battery(msg):
     status = core.status_for_battery(battery)
     # Send the most recent status, if any
     if status:
+        status = convert_timestamp(status)
         app.logger.debug("Sending initial status: %s", str(status))
         emit('status', status)
     # And subscribe to all future status updates for this battery
@@ -34,5 +44,6 @@ def reply_message(message):
 
 def send_status(status, battery):
     app.logger.debug("Broadcasting status for %s: %s", battery, str(status))
+    status = convert_timestamp(status)
     app.socketio.emit('status', status, room=battery)
 

@@ -55,9 +55,10 @@ def status_for_battery(battery):
     return batteries[battery]['status']
 
 def process_uplink(status):
+    status['timestamp'] = datetime.now()
+
     app.logger.debug("Received status: %s", status)
     values = database.status_message_to_row(status)
-    values['timestamp'] = datetime.now()
 
     battery = status['battery']
     prev_status = batteries[battery]['status']
