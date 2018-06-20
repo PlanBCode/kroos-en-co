@@ -16,7 +16,10 @@ def convert_timestamp(info):
     string. Returns a copy of the dict passed.
     """
     info = dict(info)
-    info['timestamp'] = info['timestamp'].isoformat()
+    for key in ('timestamp', 'ackTimestamp'):
+        timestamp = info.get(key, None)
+        if timestamp:
+            info[key] = timestamp.isoformat()
     return info
 
 @app.socketio.on('select_battery')

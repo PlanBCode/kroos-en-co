@@ -89,11 +89,15 @@ def config_row_to_message(row):
     else:
         timestamp = datetime.strptime(row['timestamp'], datetime_fmt)
 
+    ackTimestamp = None
+    if row['ackTimestamp']:
+        ackTimestamp = datetime.strptime(row['ackTimestamp'], datetime_fmt)
+
     return {
       'id': row['id'],
       'username': row['username'],
       'timestamp': timestamp,
-      'ackTimestamp': row['ackTimestamp'],
+      'ackTimestamp': ackTimestamp,
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
       'pump': [row['pump0'], row['pump1'], row['pump2'], row['pump3']],
