@@ -202,6 +202,13 @@ def write_calibration(app):
         app.calibration.write(f)
 
 def run(app):
+    # TODO: Calibration should probably be handled in its own module or core.
+    read_calibration(app)
+
+    if app.config.get('TTN_SKIP', False):
+        app.logger.info('Skipping MQTT connection')
+        return
+
     client = mqtt.Client(userdata={'app': app})
     client.on_connect = on_connect
     client.on_message = on_message
@@ -218,7 +225,6 @@ def run(app):
     client.connect(host, port=port)
     app.mqtt = client
 
-    read_calibration(app)
 
     threading.Thread(target=mqtt_thread, args=(client,), daemon=True).start()
 
