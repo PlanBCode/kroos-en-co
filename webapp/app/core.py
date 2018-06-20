@@ -18,6 +18,9 @@ def setup():
                 configrow = database.get_most_recent(db, 'config', {'battery': battery})
                 if configrow:
                     batteries[battery]['config'] = database.config_row_to_message(configrow)
+                statusrow = database.get_most_recent(db, 'status', {'battery': battery})
+                if statusrow:
+                    batteries[battery]['status'] = database.status_row_to_message(statusrow)
     app.logger.info("Startup state: %s", batteries)
 
 def update_timeout(config):

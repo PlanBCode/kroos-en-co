@@ -131,6 +131,21 @@ def status_message_to_row(msg):
       'maxLevel3': msg['maxLevel'][2],
     }
 
+def status_row_to_message(row):
+    return {
+      'id': row['id'],
+      'timestamp': datetime.strptime(row['timestamp'], datetime_fmt),
+      'manualTimeout': row['manualTimeout'],
+      'battery': row['battery'],
+      'pump': [row['pump0'], row['pump1'], row['pump2'], row['pump3']],
+      'targetFlow': row['targetFlow'],
+      'targetLevel': [row['targetLevel1'], row['targetLevel2'], row['targetLevel3']],
+      'minLevel': [row['minLevel1'], row['minLevel2'], row['minLevel3']],
+      'maxLevel': [row['maxLevel1'], row['maxLevel2'], row['maxLevel3']],
+      'currentFlow': [row['flowIn'], row['flowOut']],
+      'currentLevel': [row['currentLevel1'], row['currentLevel2'], row['currentLevel3']],
+      'panic': row['panic'],
+    }
 
 def insert_from_dict(db, table, values):
     """
