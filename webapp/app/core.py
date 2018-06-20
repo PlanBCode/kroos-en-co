@@ -96,25 +96,26 @@ def process_uplink(status):
                     config['ackTimestamp'] = now
     websocket.send_status(status, battery)
 
-def process_command(cmd):
-    app.logger.info('Received command: %s', cmd)
-    db = app.get_db()
-    v = database.config_message_to_row(cmd)
-    v.update({
+def process_command(config):
+    config.update({
       'timestamp': datetime.now(),
       'ackTimestamp': None,
       'username': flask_user.current_user.username,
     })
 
+    app.logger.info('Received command: %s', config)
+    db = app.get_db()
+    v = database.config_message_to_row(config)
+
     # Insert into database
     cur = database.insert_from_dict(db, 'config', v)
     db.commit()
-    v['id'] = cur.lastrowid
+    config['id'] = cur.lastrowid
 
     # Update last-known config
-    batteries[cmd['battery']]['config'] = database.config_row_to_message(v)
+    batteries[config['battery']]['config'] = config
     # Send config to node
-    mqtt.send_command(app, cmd)
+    mqtt.send_command(app, config)
 
     websocket.reply_message('Commando wordt zo snel mogelijk verstuurd')
 

@@ -65,6 +65,9 @@ def initdb_command():
 
 def config_message_to_row(msg):
     return {
+      'ackTimestamp': msg['ackTimestamp'],
+      'username': msg['username'],
+      'timestamp': msg['timestamp'],
       'manualTimeout': msg['manualTimeout'],
       'battery': msg['battery'],
       'pump0': msg['pump'][0],
