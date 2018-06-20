@@ -63,6 +63,13 @@ def initdb_command():
     sqla.create_all();
     print('Initialized the database.')
 
+
+def parse_timestamp(timestamp):
+    if timestamp is None or isinstance(timestamp, datetime):
+        return timestamp
+    return datetime.strptime(timestamp, datetime_fmt)
+
+
 def config_message_to_row(msg):
     return {
       'ackTimestamp': msg['ackTimestamp'],
@@ -86,16 +93,13 @@ def config_message_to_row(msg):
       'maxLevel3': msg['maxLevel'][2],
     }
 
-def config_row_to_message(row):
-    ackTimestamp = None
-    if row['ackTimestamp']:
-        ackTimestamp = datetime.strptime(row['ackTimestamp'], datetime_fmt)
 
+def config_row_to_message(row):
     return {
       'id': row['id'],
       'username': row['username'],
-      'timestamp': datetime.strptime(row['timestamp'], datetime_fmt),
-      'ackTimestamp': ackTimestamp,
+      'timestamp': parse_timestamp(row['timestamp']),
+      'ackTimestamp': parse_timestamp(row['ackTimestamp']),
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
       'pump': [row['pump0'], row['pump1'], row['pump2'], row['pump3']],
@@ -136,7 +140,7 @@ def status_message_to_row(msg):
 def status_row_to_message(row):
     return {
       'id': row['id'],
-      'timestamp': datetime.strptime(row['timestamp'], datetime_fmt),
+      'timestamp': parse_timestamp(row['timestamp']),
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
       'pump': [row['pump0'], row['pump1'], row['pump2'], row['pump3']],
