@@ -87,11 +87,6 @@ def config_message_to_row(msg):
     }
 
 def config_row_to_message(row):
-    if isinstance(row['timestamp'], datetime):
-        timestamp = row['timestamp']
-    else:
-        timestamp = datetime.strptime(row['timestamp'], datetime_fmt)
-
     ackTimestamp = None
     if row['ackTimestamp']:
         ackTimestamp = datetime.strptime(row['ackTimestamp'], datetime_fmt)
@@ -99,7 +94,7 @@ def config_row_to_message(row):
     return {
       'id': row['id'],
       'username': row['username'],
-      'timestamp': timestamp,
+      'timestamp': datetime.strptime(row['timestamp'], datetime_fmt),
       'ackTimestamp': ackTimestamp,
       'manualTimeout': row['manualTimeout'],
       'battery': row['battery'],
