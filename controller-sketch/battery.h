@@ -162,6 +162,11 @@ public:
     Serial.print(reverseFlow);
     Serial.println(" m3/h");
 
+    // Calculate how much extra counts of forward flow there have been
+    // (e.g. too much flow due to flow after the pump shut down, or
+    // perhaps too little flow due to water flowing back).
+    int extraCounts = forwardCounter - targetCount - reverseCounter;
+
     forwardCounter = 0;
     reverseCounter = 0;
 
@@ -174,6 +179,13 @@ public:
           prevPumpDutyCycle = 255;
         }
         targetCount = targetFlow * pulsesPerM3 / (3600000/CYCLE_INTERVAL);
+
+        // Correct for extra (or too little) flow in the previous cycle
+        if ((int)targetCount > extraCounts)
+          targetCount -= extraCounts;
+        else
+          targetCount = 0;
+
         setPumpDutyCycle(targetCount >= 1 ? 255 : 0);
         printf("Flow pulses target*100: %d\n", (int)(targetCount*100));
       }
