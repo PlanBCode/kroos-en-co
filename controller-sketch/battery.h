@@ -142,8 +142,8 @@ public:
 
   bool doCycle(unsigned long prevDuration, bool manual) {
     PumpController::doCycle(prevDuration, manual);
-    forwardFlow = (forwardCounter / pulsesPerM3) * (3600000/prevDuration);
-    reverseFlow = (reverseCounter / pulsesPerM3) * (3600000/prevDuration);
+    forwardFlow = (forwardCounter / pulsesPerM3) * (3600000.0/prevDuration);
+    reverseFlow = (reverseCounter / pulsesPerM3) * (3600000.0/prevDuration);
     Serial.print("3600000/prevDuration: ");
     Serial.println(3600000/prevDuration);
     Serial.print("Forward ");
@@ -178,7 +178,7 @@ public:
           printf("Did not reach flow target\n");
           prevPumpDutyCycle = 255;
         }
-        targetCount = targetFlow * pulsesPerM3 / (3600000/CYCLE_INTERVAL);
+        targetCount = targetFlow * pulsesPerM3 / (3600000.0/CYCLE_INTERVAL);
 
         // Correct for extra (or too little) flow in the previous cycle
         if ((int)targetCount > extraCounts)
