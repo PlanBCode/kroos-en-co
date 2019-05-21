@@ -148,12 +148,16 @@ def decode_status(raw):
     if raw[0] & 0x80:
         status['panic'] = True
     status['pump'] = [raw[2], raw[3], raw[4], raw[5]]
-    status['currentFlow'] = [raw[6], raw[7]]
+    status['forwardFlow'] = [raw[6], raw[7]]
     status['targetFlow'] = raw[8]
     status['currentLevelRaw'] = [raw[9], raw[10], raw[11]]
     status['targetLevelRaw'] = [raw[12], raw[13], raw[14]]
     status['minLevelRaw'] = [raw[15], raw[16], raw[17]]
     status['maxLevelRaw'] = [raw[18], raw[19], raw[20]]
+    if len(raw) > 21:
+        status['reverseFlow'] = [raw[21], raw[22]]
+    else:
+        status['reverseFlow'] = [0, 0]
     return status
 
 def calibrate_status(app, battery, status):

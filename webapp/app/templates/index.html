@@ -28,10 +28,14 @@
 
             function updateInterface() {
 				// update status variables
-                curFlowIn = currentStat.currentFlow[0];
-                document.getElementById('curFlowIn').innerHTML = curFlowIn;
-                curFlowOut = currentStat.currentFlow[1];
-                document.getElementById('curFlowOut').innerHTML = curFlowOut;
+                fwdFlowIn = currentStat.forwardFlow[0];
+                revFlowIn = currentStat.reverseFlow[0];
+                curFlowIn = fwdFlowIn - revFlowIn;
+                document.getElementById('curFlowIn').innerHTML = `${curFlowIn}<br/>(${fwdFlowIn} fwd / ${revFlowIn} rev)`;
+                fwdFlowOut = currentStat.forwardFlow[1];
+                revFlowOut = currentStat.reverseFlow[1];
+                curFlowOut = fwdFlowOut - revFlowOut;
+                document.getElementById('curFlowOut').innerHTML = `${curFlowOut}<br/>(${fwdFlowOut} fwd / ${revFlowOut} rev)`;
                 curLevel = currentStat.currentLevel;
                 for (var i=0;i<3;i++) {
                     document.getElementById('curLevel' + i).innerHTML = curLevel[i];
