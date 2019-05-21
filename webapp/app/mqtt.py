@@ -62,7 +62,7 @@ def process_data(app, msg, payload_raw):
     status = decode_status(payload_raw)
     calibrate_status(app, battery, status)
     status['battery'] = battery
-    app.logger.debug("Decoded status: %s", status)
+    app.logger.debug("Decoded status:\n%s", core.pp_obj(status))
     core.process_uplink(status)
 
 def mqtt_thread(client):
@@ -85,7 +85,7 @@ def send_command(app, config):
     device, battery_num = battery_to_device(app, config['battery'])
 
     calibrate_config(app, config['battery'], config)
-    app.logger.debug("Sending command: %s", str(config))
+    app.logger.debug("Sending command:\n%s", core.pp_obj(config))
 
     msg = {
 	"port": 1 + battery_num,

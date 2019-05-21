@@ -1,5 +1,6 @@
 from datetime import datetime
 import flask_user
+import pprint
 
 from . import mqtt, websocket, database, app
 
@@ -21,7 +22,7 @@ def setup():
                 statusrow = database.get_most_recent(db, 'status', {'battery': battery})
                 if statusrow:
                     batteries[battery]['status'] = database.status_row_to_message(statusrow)
-    app.logger.info("Startup state: %s", batteries)
+    app.logger.info("Startup state:\n%s", pp_obj(batteries))
 
 def update_timeout(config):
     now = datetime.now()
@@ -123,5 +124,10 @@ def process_command(config):
 
     websocket.reply_message('Commando wordt zo snel mogelijk verstuurd')
     websocket.send_config(config)
+
+def pp_obj(obj):
+    # This uses pprint rather than json, since json is either too
+    # verbose (with indenting) or single line (without indenting).
+    return pprint.pformat(obj)
 
 # vim: set sts=4 sw=4 expandtab:
