@@ -186,29 +186,29 @@ void queueUplink() {
     buf[5]  = battery[uplinkBatId]->level[2]->prevPumpDutyCycle;
 
     // Flow is in m³/hour
-    buf[6]  = battery[uplinkBatId]->flow[0]->getForwardFlow();
-    buf[7]  = battery[uplinkBatId]->flow[1]->getForwardFlow();
-    buf[8]  = battery[uplinkBatId]->flow[0]->getTargetFlow();
+    buf[6]  = round(battery[uplinkBatId]->flow[0]->getForwardFlow());
+    buf[7]  = round(battery[uplinkBatId]->flow[1]->getForwardFlow());
+    buf[8]  = round(battery[uplinkBatId]->flow[0]->getTargetFlow());
 
     // Levels are in ADC value, divided by four to fit in a byte
-    buf[9]  = battery[uplinkBatId]->level[0]->getCurrentLevel() / 4;
-    buf[10] = battery[uplinkBatId]->level[1]->getCurrentLevel() / 4;
-    buf[11] = battery[uplinkBatId]->level[2]->getCurrentLevel() / 4;
+    buf[9]  = round(battery[uplinkBatId]->level[0]->getCurrentLevel() / 4);
+    buf[10] = round(battery[uplinkBatId]->level[1]->getCurrentLevel() / 4);
+    buf[11] = round(battery[uplinkBatId]->level[2]->getCurrentLevel() / 4);
 
-    buf[12] = battery[uplinkBatId]->level[0]->getTargetLevel() / 4;
-    buf[13] = battery[uplinkBatId]->level[1]->getTargetLevel() / 4;
-    buf[14] = battery[uplinkBatId]->level[2]->getTargetLevel() / 4;
+    buf[12] = round(battery[uplinkBatId]->level[0]->getTargetLevel() / 4);
+    buf[13] = round(battery[uplinkBatId]->level[1]->getTargetLevel() / 4);
+    buf[14] = round(battery[uplinkBatId]->level[2]->getTargetLevel() / 4);
 
-    buf[15] = battery[uplinkBatId]->level[0]->getMinLevel() / 4;
-    buf[16] = battery[uplinkBatId]->level[1]->getMinLevel() / 4;
-    buf[17] = battery[uplinkBatId]->level[2]->getMinLevel() / 4;
+    buf[15] = round(battery[uplinkBatId]->level[0]->getMinLevel() / 4);
+    buf[16] = round(battery[uplinkBatId]->level[1]->getMinLevel() / 4);
+    buf[17] = round(battery[uplinkBatId]->level[2]->getMinLevel() / 4);
 
-    buf[18] = battery[uplinkBatId]->level[0]->getMaxLevel() / 4;
-    buf[19] = battery[uplinkBatId]->level[1]->getMaxLevel() / 4;
-    buf[20] = battery[uplinkBatId]->level[2]->getMaxLevel() / 4;
+    buf[18] = round(battery[uplinkBatId]->level[0]->getMaxLevel() / 4);
+    buf[19] = round(battery[uplinkBatId]->level[1]->getMaxLevel() / 4);
+    buf[20] = round(battery[uplinkBatId]->level[2]->getMaxLevel() / 4);
 
-    buf[21]  = battery[uplinkBatId]->flow[0]->getReverseFlow();
-    buf[22]  = battery[uplinkBatId]->flow[1]->getReverseFlow();
+    buf[21]  = round(battery[uplinkBatId]->flow[0]->getReverseFlow());
+    buf[22]  = round(battery[uplinkBatId]->flow[1]->getReverseFlow());
 
     // Prepare upstream data transmission at the next possible time.
     LMIC_setTxData2(TX_PORT + uplinkBatId, buf, sizeof(buf), 0);
