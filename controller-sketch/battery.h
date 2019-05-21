@@ -83,8 +83,8 @@ public:
 
 class FlowController : public PumpController {
 public:
-  int sensorPin;
-  int lastSensorState;
+  int pulsePin;
+  int lastPulseState;
   unsigned int flowCounter;
   const double pulsesPerM3 = 200.0;
   double currentFlow;
@@ -95,11 +95,11 @@ public:
   unsigned long lastPulseStart;
 
   // pumpPin -1 means no pump is connected, only measure flow
-  FlowController(int sensorPin, int pumpPin = -1)
+  FlowController(int pulsePin, int pumpPin = -1)
   : PumpController(pumpPin) {
-    this->sensorPin = sensorPin;
+    this->pulsePin = pulsePin;
     this->pumpPin = pumpPin;
-    pinMode(sensorPin, INPUT);
+    pinMode(pulsePin, INPUT);
 
     flowCounter = 0.0;
     targetFlow = 0.0;
@@ -152,14 +152,14 @@ public:
   void doLoop(unsigned long durationSoFar, bool manual) {
     PumpController::doLoop(durationSoFar, manual);
 
-    int sensorState = digitalRead(sensorPin);
-    if (sensorState != lastSensorState) {
-      if (sensorState == HIGH) lastPulseStart = millis();
-      if (sensorState == LOW && millis() - lastPulseStart > 10) {
+    int pulseState = digitalRead(pulsePin);
+    if (pulseState != lastPulseState) {
+      if (pulseState == HIGH) lastPulseStart = millis();
+      if (pulseState == LOW && millis() - lastPulseStart > 10) {
 //        printf("Flow pulse\n");
         flowCounter++;
       }
-      lastSensorState = sensorState;
+      lastPulseState = pulseState;
     }
 
     if (!manual) {
