@@ -269,6 +269,7 @@ void loop() {
     os_runloop_once();
     unsigned long now = millis();
     if (lastCycleTime == 0 || now - lastCycleTime > CYCLE_INTERVAL) {
+        printf("Cycle time: %lu\n", now - lastCycleTime);
         for(size_t i=0;i<lengthof(battery);i++) {
             printf("***** Battery %d *****\n", i+1);
             battery[i]->doCycle(now - lastCycleTime);

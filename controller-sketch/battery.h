@@ -144,8 +144,6 @@ public:
     PumpController::doCycle(prevDuration, manual);
     forwardFlow = (forwardCounter / pulsesPerM3) * (3600000.0/prevDuration);
     reverseFlow = (reverseCounter / pulsesPerM3) * (3600000.0/prevDuration);
-    Serial.print("3600000/prevDuration: ");
-    Serial.println(3600000/prevDuration);
     Serial.print("Forward ");
     Serial.print(forwardCounter);
     Serial.print(" pulses, ");
