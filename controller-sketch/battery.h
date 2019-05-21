@@ -5,6 +5,8 @@
 // set relais convention
 #define PUMP_ON LOW
 #define PUMP_OFF HIGH
+#define DIRECTION_FORWARD LOW
+#define DIRECTION_REVERSE HIGH
 
 #ifndef LMIC_PRINTF_TO
 #error "printfs need LMIC_PRINTF_TO, or they will crash"
@@ -84,10 +86,13 @@ public:
 class FlowController : public PumpController {
 public:
   int pulsePin;
+  int directionPin;
   int lastPulseState;
-  unsigned int flowCounter;
+  unsigned int forwardCounter;
+  unsigned int reverseCounter;
   const double pulsesPerM3 = 200.0;
-  double currentFlow;
+  double forwardFlow;
+  double reverseFlow;
   double targetFlow;
   uint32_t targetCount;
   uint8_t prevPumpDutyCycle;
@@ -95,19 +100,35 @@ public:
   unsigned long lastPulseStart;
 
   // pumpPin -1 means no pump is connected, only measure flow
-  FlowController(int pulsePin, int pumpPin = -1)
+  // directionPin -1 means no direction pin is connected, assume forward
+  // flow only.
+  FlowController(int pulsePin, int directionPin = -1, int pumpPin = -1)
   : PumpController(pumpPin) {
     this->pulsePin = pulsePin;
+    this->directionPin = directionPin;
     this->pumpPin = pumpPin;
     pinMode(pulsePin, INPUT);
+    // Use a pullup for the direction pin, since this is switched by a
+    // relay in the sensor.
+    if (directionPin >= 0)
+      pinMode(directionPin, INPUT_PULLUP);
 
-    flowCounter = 0.0;
+    forwardCounter = 0;
+    reverseCounter = 0;
     targetFlow = 0.0;
     targetCount = 0;
   }
 
   double getCurrentFlow() {
-    return currentFlow;
+    return forwardFlow - reverseFlow;
+  }
+
+  double getForwardFlow() {
+    return forwardFlow;
+  }
+
+  double getReverseFlow() {
+    return reverseFlow;
   }
 
   void setTargetFlow(double value) {
@@ -121,15 +142,28 @@ public:
 
   bool doCycle(unsigned long prevDuration, bool manual) {
     PumpController::doCycle(prevDuration, manual);
-    currentFlow = (flowCounter / pulsesPerM3) * (3600000/prevDuration);
+    forwardFlow = (forwardCounter / pulsesPerM3) * (3600000/prevDuration);
+    reverseFlow = (reverseCounter / pulsesPerM3) * (3600000/prevDuration);
     Serial.print("3600000/prevDuration: ");
     Serial.println(3600000/prevDuration);
-    Serial.print("flowCounter / pulsesPerM3: ");
-    Serial.println(flowCounter / pulsesPerM3);
-    Serial.print("currentFlow: ");
-    Serial.println(currentFlow);
-    printf("Flow pulses: %d, flow*100: %d\n", flowCounter, (int)(currentFlow*100));
-    flowCounter = 0;
+    Serial.print("Forward ");
+    Serial.print(forwardCounter);
+    Serial.print(" pulses, ");
+    Serial.print(forwardCounter / pulsesPerM3);
+    Serial.print(" m3, ");
+    Serial.print(forwardFlow);
+    Serial.println(" m3/h");
+
+    Serial.print("Reverse ");
+    Serial.print(reverseCounter);
+    Serial.print(" pulses, ");
+    Serial.print(reverseCounter / pulsesPerM3);
+    Serial.print(" m3, ");
+    Serial.print(reverseFlow);
+    Serial.println(" m3/h");
+
+    forwardCounter = 0;
+    reverseCounter = 0;
 
     if (!manual) {
       if (pumpPin != -1) {
@@ -156,15 +190,17 @@ public:
     if (pulseState != lastPulseState) {
       if (pulseState == HIGH) lastPulseStart = millis();
       if (pulseState == LOW && millis() - lastPulseStart > 10) {
-//        printf("Flow pulse\n");
-        flowCounter++;
+        if (directionPin < 0 || digitalRead(directionPin) == DIRECTION_FORWARD)
+          forwardCounter++;
+        else
+          reverseCounter++;
       }
       lastPulseState = pulseState;
     }
 
     if (!manual) {
       if (pumpPin != -1) {
-        if (getPumpState() && flowCounter >= targetCount) {
+        if (getPumpState() && forwardCounter >= targetCount) {
           setPumpState(0);
           // Calculate how long the pump has been on
           prevPumpDutyCycle = durationSoFar * 255 / CYCLE_INTERVAL;
@@ -296,8 +332,8 @@ public:
     panic = false;
   }
 
-  void attachFlowController(size_t i, int sensorPin, int pumpPin = -1) {
-    flow[i] = new FlowController(sensorPin, pumpPin);
+  void attachFlowController(size_t i, int sensorPin, int directionPin = -1, int pumpPin = -1) {
+    flow[i] = new FlowController(sensorPin, directionPin, pumpPin);
   }
 
   void attachLevelController(size_t i, int sensorPin, int pumpPin, double a, double b) {

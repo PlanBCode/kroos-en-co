@@ -185,9 +185,9 @@ void queueUplink() {
     buf[4]  = battery[uplinkBatId]->level[1]->prevPumpDutyCycle;
     buf[5]  = battery[uplinkBatId]->level[2]->prevPumpDutyCycle;
 
-    // Flow is in M²/hour
-    buf[6]  = battery[uplinkBatId]->flow[0]->getCurrentFlow();
-    buf[7]  = battery[uplinkBatId]->flow[1]->getCurrentFlow();
+    // Flow is in m³/hour
+    buf[6]  = battery[uplinkBatId]->flow[0]->getForwardFlow();
+    buf[7]  = battery[uplinkBatId]->flow[1]->getForwardFlow();
     buf[8]  = battery[uplinkBatId]->flow[0]->getTargetFlow();
 
     // Levels are in ADC value, divided by four to fit in a byte
@@ -221,20 +221,20 @@ void setup() {
     analogReference(EXTERNAL);
 
     battery[0] = new Battery();
-    battery[0]->attachFlowController(0, 8, 23);
+    battery[0]->attachFlowController(0, 8, 47, 23);
     // 3316mV, 1023 steps, 100Ohm, 0.154mA/cm. 4mA/0.154 - 20cm
     // Calibration values are used for debug printing only!
     battery[0]->attachLevelController(0, A0, 25, 3316.0/1023/100/0.176, -4/0.176 - 20);
     battery[0]->attachLevelController(1, A1, 27, 3316.0/1023/100/0.165, -4/0.165 - 35);
     battery[0]->attachLevelController(2, A2, 29, 3316.0/1023/100/0.154, -4/0.154 - 20);
-    battery[0]->attachFlowController(1, 5);
+    battery[0]->attachFlowController(1, 5, 49);
 
     battery[1] = new Battery();
-    battery[1]->attachFlowController(0, 4, 31);
+    battery[1]->attachFlowController(0, 4, 51, 31);
     battery[1]->attachLevelController(0, A3, 33, 3316.0/1023/100/0.176, -4/0.176 - 16);
     battery[1]->attachLevelController(1, A4, 35, 3316.0/1023/100/0.159, -4/0.159 - 24);
     battery[1]->attachLevelController(2, A5, 37, 3316.0/1023/100/0.154, -4/0.154 - 13);
-    battery[1]->attachFlowController(1, 3);
+    battery[1]->attachFlowController(1, 3, 53);
 
     for (size_t b=0; b<2; b++) {
       for (size_t i=0;i<lengthof(battery[b]->flow);i++) battery[b]->flow[i]->disable();
