@@ -150,7 +150,8 @@ def status_row_to_message(row):
       'targetLevel': [row['targetLevel1'], row['targetLevel2'], row['targetLevel3']],
       'minLevel': [row['minLevel1'], row['minLevel2'], row['minLevel3']],
       'maxLevel': [row['maxLevel1'], row['maxLevel2'], row['maxLevel3']],
-      'currentFlow': [row['flowIn'], row['flowOut']],
+      'forwardFlow': [row['fwdFlowIn'], row['fwdFlowOut']],
+      'reverseFlow': [row['revFlowIn'], row['revFlowOut']],
       'currentLevel': [row['currentLevel1'], row['currentLevel2'], row['currentLevel3']],
       'panic': row['panic'],
     }
