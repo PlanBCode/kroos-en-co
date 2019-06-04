@@ -90,9 +90,6 @@ void onEvent (ev_t ev) {
             if (LMIC.txrxFlags & TXRX_ACK)
                 Serial.println(F("Received ack"));
             if (LMIC.dataLen) {
-                Serial.print(F("Received "));
-                Serial.print(LMIC.dataLen);
-                Serial.println(F(" bytes of payload"));
                 uint8_t port = *(LMIC.frame + LMIC.dataBeg - 1);
                 handleDownlink(port, LMIC.frame + LMIC.dataBeg, LMIC.dataLen);
             }
@@ -128,6 +125,12 @@ void printByte(uint8_t b) {
 
 
 void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
+    Serial.print(F("Received "));
+    Serial.print(len);
+    Serial.print(F(" bytes of payload on port"));
+    Serial.print(port);
+    Serial.print(F(", frame counter "));
+    Serial.println(LMIC.seqnoDn);
     for (uint8_t i = 0; i < len; ++i)
         printByte(buf[i]);
     Serial.println();
@@ -213,7 +216,12 @@ void queueUplink() {
     // Prepare upstream data transmission at the next possible time.
     LMIC_setTxData2(TX_PORT + uplinkBatId, buf, sizeof(buf), 0);
 
-    Serial.println(F("Packet queued"));
+    Serial.print(F("Packet queued, frame counter "));
+    Serial.println(LMIC.seqnoUp);
+    for (uint8_t i = 0; i < sizeof(buf); ++i)
+        printByte(buf[i]);
+    Serial.println();
+
     uplinkBatId = (uplinkBatId+1)%lengthof(battery);
 }
 
