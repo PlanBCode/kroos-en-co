@@ -185,7 +185,7 @@ public:
           targetCount = 0;
 
         setPumpDutyCycle(targetCount >= 1 ? 255 : 0);
-        printf("Flow pulses target*100: %d\n", (int)(targetCount*100));
+        printf("Flow pulses target: %d\n", (int)(targetCount));
       }
     } else {
       prevPumpDutyCycle = pumpDutyCycle;
