@@ -94,7 +94,7 @@ public:
   double forwardFlow;
   double reverseFlow;
   double targetFlow;
-  uint32_t targetCount;
+  unsigned int targetCount;
   uint8_t prevPumpDutyCycle;
 
   unsigned long lastPulseStart;
