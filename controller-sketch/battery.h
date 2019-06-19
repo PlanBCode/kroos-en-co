@@ -160,6 +160,14 @@ public:
     Serial.print(reverseFlow);
     Serial.println(" m3/h");
 
+    // If we did not reach our target the previous cycle, pretend that
+    // we did for calculating the extraCounts. This prevents building up
+    // a huge correction when we repeatedly do not reach the target.
+    // This still allows extraCounts to become negative, but only up to
+    // -reverseCounter, so no buildup occurs.
+    if (forwardCounter < targetCount)
+      targetCount = forwardCounter;
+
     // Calculate how much extra counts of forward flow there have been
     // (e.g. too much flow due to flow after the pump shut down, or
     // perhaps too little flow due to water flowing back).
