@@ -336,10 +336,12 @@ public:
   LevelController* level[3];
   unsigned long manualTimeout;
   bool panic;
+  bool configValid;
 
   Battery() {
     manualTimeout = 0;
     panic = false;
+    configValid = false;
   }
 
   void attachFlowController(size_t i, int sensorPin, int directionPin = -1, int pumpPin = -1) {
@@ -357,16 +359,24 @@ public:
     manualTimeout = timeout*60000;
   }
 
+  void setConfigValid() {
+    printf("SetConfigValid\n");
+    configValid = true;
+  }
+
   unsigned int getManualTimeout() {
     return manualTimeout / 60000;
   }
 
   bool doCycle(unsigned long prevDuration) {
     manualTimeout -= min(manualTimeout, prevDuration);
-    bool manual = (manualTimeout > 0);
+    // When the config is not yet valid, fake manual mode, since then
+    // all manual duty cycles will still be zero. Manual mode will also
+    // prevent the PID from running and building up meaningless I-value.
+    bool manual = (manualTimeout > 0) || !configValid;
     for (size_t i=0;i<lengthof(flow);i++) panic |= flow[i]->doCycle(prevDuration, manual);
     for (size_t i=0;i<lengthof(level);i++) panic |= level[i]->doCycle(prevDuration, manual);
-    printf("Manualtimeout: %lu panic: %d\n", manualTimeout, (int)panic);
+    printf("Manualtimeout: %lu panic: %d configValid: %d\n", manualTimeout, (int)panic, (int)configValid);
     if (panic) {
       for (size_t i=0;i<lengthof(flow);i++) flow[i]->disable();
       for (size_t i=0;i<lengthof(level);i++) level[i]->disable();

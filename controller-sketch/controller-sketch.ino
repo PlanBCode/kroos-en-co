@@ -170,6 +170,8 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     battery[downlinkBatId]->level[0]->setMaxLevel(buf[13] * 4);
     battery[downlinkBatId]->level[1]->setMaxLevel(buf[14] * 4);
     battery[downlinkBatId]->level[2]->setMaxLevel(buf[15] * 4);
+
+    battery[downlinkBatId]->setConfigValid();
 }
 
 void queueUplink() {
