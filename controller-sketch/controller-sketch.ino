@@ -145,6 +145,10 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     Serial.print("Received config for battery ");
     Serial.println(downlinkBatId + 1);
 
+    applyConfig(downlinkBatId, buf);
+}
+
+void applyConfig(unsigned downlinkBatId, const uint8_t *buf) {
     battery[downlinkBatId]->panic = false;
     for (size_t i=0;i<lengthof(battery[downlinkBatId]->flow);i++) battery[downlinkBatId]->flow[i]->enable();
     for (size_t i=0;i<lengthof(battery[downlinkBatId]->level);i++) battery[downlinkBatId]->level[i]->enable();
