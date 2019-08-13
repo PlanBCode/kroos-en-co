@@ -141,42 +141,42 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
         return;
     }
 
-    unsigned downlinkBatId = port - RX_PORT;
+    unsigned batId = port - RX_PORT;
     Serial.print("Received config for battery ");
-    Serial.println(downlinkBatId + 1);
+    Serial.println(batId + 1);
 
-    applyConfig(downlinkBatId, buf);
+    applyConfig(batId, buf);
 }
 
-void applyConfig(unsigned downlinkBatId, const uint8_t *buf) {
-    battery[downlinkBatId]->panic = false;
-    for (size_t i=0;i<lengthof(battery[downlinkBatId]->flow);i++) battery[downlinkBatId]->flow[i]->enable();
-    for (size_t i=0;i<lengthof(battery[downlinkBatId]->level);i++) battery[downlinkBatId]->level[i]->enable();
+void applyConfig(unsigned batId, const uint8_t *buf) {
+    battery[batId]->panic = false;
+    for (size_t i=0;i<lengthof(battery[batId]->flow);i++) battery[batId]->flow[i]->enable();
+    for (size_t i=0;i<lengthof(battery[batId]->level);i++) battery[batId]->level[i]->enable();
 
     uint16_t timeout = (buf[0] << 8) | buf[1];
-    battery[downlinkBatId]->setManualTimeout(timeout);
+    battery[batId]->setManualTimeout(timeout);
     if (timeout > 0) {
-      battery[downlinkBatId]->flow[0]->setPumpDutyCycle(buf[2]);
-      battery[downlinkBatId]->level[0]->setPumpDutyCycle(buf[3]);
-      battery[downlinkBatId]->level[1]->setPumpDutyCycle(buf[4]);
-      battery[downlinkBatId]->level[2]->setPumpDutyCycle(buf[5]);
+      battery[batId]->flow[0]->setPumpDutyCycle(buf[2]);
+      battery[batId]->level[0]->setPumpDutyCycle(buf[3]);
+      battery[batId]->level[1]->setPumpDutyCycle(buf[4]);
+      battery[batId]->level[2]->setPumpDutyCycle(buf[5]);
     }
 
-    battery[downlinkBatId]->flow[0]->setTargetFlow(buf[6]);
+    battery[batId]->flow[0]->setTargetFlow(buf[6]);
 
-    battery[downlinkBatId]->level[0]->setTargetLevel(buf[7] * 4);
-    battery[downlinkBatId]->level[1]->setTargetLevel(buf[8] * 4);
-    battery[downlinkBatId]->level[2]->setTargetLevel(buf[9] * 4);
+    battery[batId]->level[0]->setTargetLevel(buf[7] * 4);
+    battery[batId]->level[1]->setTargetLevel(buf[8] * 4);
+    battery[batId]->level[2]->setTargetLevel(buf[9] * 4);
 
-    battery[downlinkBatId]->level[0]->setMinLevel(buf[10] * 4);
-    battery[downlinkBatId]->level[1]->setMinLevel(buf[11] * 4);
-    battery[downlinkBatId]->level[2]->setMinLevel(buf[12] * 4);
+    battery[batId]->level[0]->setMinLevel(buf[10] * 4);
+    battery[batId]->level[1]->setMinLevel(buf[11] * 4);
+    battery[batId]->level[2]->setMinLevel(buf[12] * 4);
 
-    battery[downlinkBatId]->level[0]->setMaxLevel(buf[13] * 4);
-    battery[downlinkBatId]->level[1]->setMaxLevel(buf[14] * 4);
-    battery[downlinkBatId]->level[2]->setMaxLevel(buf[15] * 4);
+    battery[batId]->level[0]->setMaxLevel(buf[13] * 4);
+    battery[batId]->level[1]->setMaxLevel(buf[14] * 4);
+    battery[batId]->level[2]->setMaxLevel(buf[15] * 4);
 
-    battery[downlinkBatId]->setConfigValid();
+    battery[batId]->setConfigValid();
 }
 
 void queueUplink() {
