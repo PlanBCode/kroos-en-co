@@ -41,6 +41,14 @@ const uint8_t RX_PORT = 1;
 const uint8_t CONFIG_LEN = 16;
 unsigned long lastCycleTime = 0;
 
+// Random value to detect a valid EEPROM. Includes number of batteries
+// and packet length, so EEPROM is automatically invalidated when these
+// change. Should be changed when the packet layout changes without
+// changing the length.
+const uint32_t EEPROM_MAGIC = (uint32_t)0x18F5 << 16 | (uint32_t)lengthof(battery) << 8 | CONFIG_LEN;
+// Header is the magic value, plus one valid byte for each battery
+const size_t EEPROM_HEADER_SIZE = sizeof(EEPROM_MAGIC) + lengthof(battery);
+
 // Pin mapping
 const lmic_pinmap lmic_pins = {
     .nss = 10,
@@ -146,6 +154,8 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
     Serial.println(batId + 1);
 
     applyConfig(batId, buf);
+    // Save to EEPROM
+    saveConfig(batId, buf);
 }
 
 void applyConfig(unsigned batId, const uint8_t *buf) {
@@ -177,6 +187,59 @@ void applyConfig(unsigned batId, const uint8_t *buf) {
     battery[batId]->level[2]->setMaxLevel(buf[15] * 4);
 
     battery[batId]->setConfigValid();
+}
+
+void setupEeprom() {
+    uint32_t magic = eeprom_read_dword(0);
+    if (magic != EEPROM_MAGIC) {
+        Serial.print("Unexpected EEPROM magic value, (re)formatting EEPROM. Value read is: 0x");
+        Serial.println(magic, HEX);
+
+        // Clear valid bytes
+        for (size_t b=0; b<lengthof(battery); b++)
+            eeprom_update_byte(sizeof(EEPROM_MAGIC) + b, 0);
+        // Write magic value
+        eeprom_update_dword(0, EEPROM_MAGIC);
+    }
+}
+
+void saveConfig(unsigned batId, const uint8_t *buf) {
+    Serial.print("Saving config for battery ");
+    Serial.println(batId);
+
+    // Write downlink packet as-is
+    size_t addr = EEPROM_HEADER_SIZE + batId * CONFIG_LEN;
+    eeprom_update_block(buf, addr, CONFIG_LEN);
+
+    // Mark as valid
+    size_t valid_addr = sizeof(EEPROM_MAGIC) + batId;
+    eeprom_update_byte(valid_addr, 1);
+}
+
+void loadConfig(unsigned batId) {
+    // Check valid byte
+    size_t valid_addr = sizeof(EEPROM_MAGIC) + batId;
+    uint8_t valid = eeprom_read_byte(valid_addr);
+    if (!valid) {
+        Serial.print("No config found found for battery ");
+        Serial.print(batId);
+        Serial.println(", leaving uninitialized");
+        return;
+    }
+
+    // Load packet
+    Serial.print("Loading config for battery ");
+    Serial.println(batId);
+    uint8_t buf[CONFIG_LEN];
+    size_t addr = EEPROM_HEADER_SIZE + batId * CONFIG_LEN;
+    eeprom_read_block(buf, addr, CONFIG_LEN);
+
+    // Clear the manual timeout, since that timeout is probably already
+    // passed by now.
+    buf[0] = buf[1] = 0;
+
+    // Apply
+    applyConfig(batId, buf);
 }
 
 void queueUplink() {
@@ -258,6 +321,10 @@ void setup() {
       for (size_t i=0;i<lengthof(battery[b]->flow);i++) battery[b]->flow[i]->disable();
       for (size_t i=0;i<lengthof(battery[b]->level);i++) battery[b]->level[i]->disable();
     }
+
+    setupEeprom();
+    for (size_t b=0; b<lengthof(battery); b++)
+        loadConfig(b);
 
     uplinkBatId = 0;
 
