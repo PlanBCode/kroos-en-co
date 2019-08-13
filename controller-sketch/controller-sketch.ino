@@ -38,6 +38,7 @@ void os_getDevKey (u1_t* buf) {  memcpy_P(buf, APPKEY, 16);}
 
 const uint8_t TX_PORT = 1;
 const uint8_t RX_PORT = 1;
+const uint8_t CONFIG_LEN = 16;
 unsigned long lastCycleTime = 0;
 
 // Pin mapping
@@ -135,7 +136,7 @@ void handleDownlink(uint8_t port, uint8_t *buf, uint8_t len) {
         printByte(buf[i]);
     Serial.println();
 
-    if (port < RX_PORT || port >= RX_PORT + lengthof(battery) || len != 16) {
+    if (port < RX_PORT || port >= RX_PORT + lengthof(battery) || len != CONFIG_LEN) {
         Serial.println("Skipping unknown or invalid packet");
         return;
     }
